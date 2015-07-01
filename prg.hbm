@@ -1,0 +1,7 @@
+-ie:\cl -o..\di -w1 -m -n
+-gui -gtwvt
+-lhbwin
+#-lhbzebra
+#-lelzabdr
+main frmrun io io_2 getsys help error clp_brow mds_spec mds dm_form osobodni menu recept zapot druki element dodatki
+#cppl852m.c
