@@ -60,23 +60,23 @@ local getlist,a,b,c,d,scr
     _spform:={|p,l|tranR(RIGHT(p,l),"####.##.##|X|"+repl("X",A_DILTH))}
     if alias()="RELEWY"
        _sfor:={||dieta=" "}
-       if PosStr $ Indexkey(0)
+       if [at(] $ lower(INDEXKEY(0))
           _sp2s:={|x|if(len(x)<=8,x,dseek(,'data,posilek,dieta',stod(left(x,8)),subs(x,9,1),subs(x,10)))}
-          _ss2p:={|x|left(x,8)+if(len(x)>8,subs(posstr,val(subs(x,9,1)),1)+subs(x,10),'')}
+          _ss2p:={|x|left(x,8)+if(len(x)>8,subs(posstr,asc(subs(x,9))%16,1)+subs(x,10),'')}
           _spform:={|p,l|tranr(eval(_ss2p,p,l),"####.##.##|X|"+repl("X",A_DILTH))}
        endif
     elseif ordsetfocus()="MAIN_KOD"
-       if PosStr $ Indexkey(0)
+       if [at(] $ lower(INDEXKEY(0))
           _sp2s:={|x|if(len(x)<=11,x,dseek(,'kod_osoby,data,posilek,dieta',left(x,3),stod(subs(x,4,8)),subs(x,12,1),subs(x,13)))}
-          _ss2p:={|x|left(x,11)+if(len(x)>11,subs(posstr,val(subs(x,12,1)),1)+subs(x,13),'')}
+          _ss2p:={|x|left(x,11)+if(len(x)>11,subs(posstr,asc(subs(x,12))%16,1)+subs(x,13),'')}
           _spform:={|p,l|tranr(eval(_ss2p,p,l),"XXX|####.##.##|X")}
        else
           _spform:={|p|tranR(p,"XXX|####.##.##|X")}
        endif
     else
-       if PosStr $ Indexkey(0)
+       if [at(] $ lower(INDEXKEY(0))
           _sp2s:={|y,l,x,n|x:=right(y,l),n:=len(y)-l,y:=left(y,n),y+if(len(x)<=8,x,subs(dseek(,'data,posilek,dieta',stod(left(x,8)),subs(x,9,1),subs(x,10)),n+1))}
-          _ss2p:={|y,l,x,n|x:=right(y,l),n:=len(y)-l,y:=left(y,n),y+left(x,8)+if(len(x)>8,subs(posstr,val(subs(x,9,1)),1)+subs(x,10),'')}
+          _ss2p:={|y,l,x,n|x:=right(y,l),n:=len(y)-l,y:=left(y,n),y+left(x,8)+if(len(x)>8,subs(posstr,asc(subs(x,9))%16,1)+subs(x,10),'')}
           _spform:={|p,l|tranr(right(eval(_ss2p,p,l),l),"####.##.##|X|"+repl("X",A_DILTH))}
        endif
     endif
@@ -157,7 +157,7 @@ local getlist,a,b,c,d,scr
         if valtype(d)='L'
           sayl 'Warto˜† od¾ywcza:' get d PICTURE "L" valid {|r,x|choicew:=x,.t.} when choicef='J  '
         else
-          sayl 'Warto˜† od¾ywcza:' get d PICTURE "#" valid {|r,x|choicew:=x,.t.} when choicef='J  '
+          sayl 'Warto˜† od¾ywcza:' get d PICTURE "##" valid {|r,x|choicew:=x,.t.} when choicef='J  '
         endif
 #endif
         @ _skey[1]+4,_skey[2]+14 get b picture "@!" valid {|r|r:=b=' '.or.aczojs(grupy),if(r,choiceg:=b,),r} when choicef='J  '
@@ -170,10 +170,12 @@ local getlist,a,b,c,d,scr
         *
         if c>0
            SET CONSOLE OFF
+/*
 #ifdef A_WIN_PRN
            MEMVAR->oprn:=A_WIN_PRN
 #endif
            print()
+*/
         else
            scr:=savescreen()
            set alternate to (left(procname(),8)+'.TXT' )
@@ -269,9 +271,9 @@ else
   if _flp=0.and.!main->(dbseek(keyp)).and.!zapot->(dbseek(keyp)).and.!menu->(dbseek(keyp))
 #undef D_LAN
 #ifdef A_LAN
-  #define D_LAN reclock()
+  #define D_LAN reclock() .and. wart_tot=0
 #else
-  #define D_LAN .t.
+  #define D_LAN wart_tot=0
 #endif
      SELECT RELEWY
      seek dseek(,'data,posilek,dieta',stod(left(keyp,8)),subs(keyp,9,1),'')
@@ -308,8 +310,8 @@ static procedure dok1(_f)
  @ 1,10 say "Cena"
   @ 1,20 say "Data"
   @ 1,26 say "Pos."
-  @ 1,32 say "Jadˆospis"
-  @ 1,42 say "Zapotrzebowanie"
+  @ 1,42 say "Jadˆospis"
+  @ 1,52 say "Zapotrzebow"
   @ 3,0,5,_fco2 BOX 'ÌÍ¹º¼ÍÈº '
   @ 3,2 say;
  'ÍÍÍÍKtoÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍIlo˜†ÍÍÍdiÍgrÍwarto˜†'
@@ -326,10 +328,11 @@ static proc dok2(getlist)
      da:=data
      kon:=posilek
   endif
-  @ 2,33 say if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak") color _sbkgr
-  @ 2,45 say if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak") color _sbkgr
-  @ 2,18 get da picture "@D" valid {||setpos(2,33),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),setpos(2,45),devout(if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),.t.}
-  @ 2,30 get kon valid {||setpos(2,33),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),setpos(2,45),devout(if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),aczojs(posilki)}
+  @ 2,30 say posilki[max(1,ascan(posilki,kon))] COLOR _sbkgr
+  @ 2,43 say if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak") color _sbkgr
+  @ 2,55 say if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak") color _sbkgr
+  @ 2,18 get da picture "@D" valid {||setpos(2,43),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),setpos(2,55),devout(if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),.t.}
+  @ 2,30 get kon valid {|x,y|x:=NIL,y:=aczojs(posilki,,@x),devout(posilki[x],_sbkgr),setpos(2,43),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),setpos(2,55),devout(if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),y}
   __setproc(procname(0))
 return
 **********
@@ -542,6 +545,9 @@ local i,totrec,da,kon,carry,w,d,coldtot,cnewtot,a,b
            grupa:=gr
            dieta:=di
            ilE_POS:=il
+#ifdef A_DODATKI
+           field->opis:=osoby->stanowisko
+#endif
         endif
         showwar(_f,il,di)
         if il=0
@@ -699,6 +705,9 @@ local rec,w,i,da,kon
    select MAIN
    //i+=il-if(_fnowy .or. MAIN->dieta<>di,0,MAIN->ile_pos)
    @ _fk,50  say strpic(round(il*D_CENA,A_ZAOKR),10,A_ZAOKR,"@E ",.t.) color _sbkgr
+#ifdef A_DODATKI
+   @ _fk,49 say trim(main->opis) COLOR _sbkgr
+#endif
    RELEWY->(dbgoto( rec ))
 //endif
 @ 2,9   say strpic(D_CENA,5,A_ZAOKR,"@E ",.t.) color _sbkgr
@@ -729,8 +738,7 @@ field ile_pos,kod_osoby,nazwisko,stanowisko,grupa
     set order to tag osob_kod
     set relation to
 
-  ZNALAZ:=szukam({0,min(col(),maxcol()-60),maxrow(),,1,len(trim(kos)),;
-     'KodÂNazwiskoÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂStanowisko',;
+  ZNALAZ:=szukam({0,min(col(),maxcol()-60),maxrow(),,1,len(trim(kos)),,;
   {||kod_osoby+"³"+nazwisko+"³"+stanowisko+"³"+dieta+"³"+grupa},;
     {|k,s|sosob(k,s,.f.)},UpP(trim(kos))})
   select relewy
@@ -773,7 +781,6 @@ FUNCTION KATALOG(_s)
 DEFAULT _s        TO array(_sLEN)
 DEFAULT _sbeg     TO 1
 DEFAULT _slth     TO 0
-DEFAULT _snagl    TO 'KodÂNazwiskoÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂStanowisko'
 DEFAULT _sprompt  TO {||kod_osoby+"³"+nazwisko+"³"+stanowisko+"³"+dieta+"³"+grupa}
 DEFAULT _sinfo    TO {|_skey,_s|sosob(if(_skey=13,9,_skey),_s,.t.)}
 DEFAULT _spocz    TO ''
@@ -785,6 +792,7 @@ local n,g,s,i,k,d,r,getlist
 
 DO CASE
   CASE _skey=0
+DEFAULT _snagl    TO 'KodÂ'+pad('Nazwisko',len(nazwisko),'Ä')+'ÂStanowisko'
       if _slth=0
       elseif _spocz>'9'
         SET ORDER TO tag osob_naz

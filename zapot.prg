@@ -2,7 +2,9 @@
  #define MAG_BIEZ " 1"
 #endif
 #ifdef A_GOCZ
-#define A_ZAP_DAN
+ #ifndef A_ZAP_DAN
+  #define A_ZAP_DAN
+ #endif
 #endif
 #include "dm_form.ch"
 #include "inkey.ch"
@@ -138,7 +140,7 @@ static procedure zdok1(_f)
   @ 1,_fco1+9 say "Cena"
   @ 1,_fco1+20 say "Data"
   @ 1,_fco1+25 say "Pos."
-  @ 1,_fco1+31 say "Jadˆospis"
+  @ 1,_fco1+41 say "Jadˆospis"
   @ 3,_fco1,5,_fco2 BOX 'ÌÍ¹º¼ÍÈº '
   @ 3,_fco1+31 say 'SurowiecÍÍÍÍÍÍÍÍÍDietaÍÍÍÍIlo˜†ÍÍÍÍÍÍÍÍGramÍIlp'
 return
@@ -153,11 +155,12 @@ static proc zdok2(_f,getlist)
      da:=data
      kon:=posilek
   endif
+  @ 2,_fco1+29 say posilki[max(1,ascan(posilki,kon))] COLOR _sbkgr
   @ 2,_fco1+1 say ile_pos picture D_ILPIC color _sbkgr
   @ 2,_fco1+7 say strpic(WARTOSC/ile_pos,7,A_ZAOKR,"@E ",.t.) color _sbkgr
-  @ 2,_fco1+31 say if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak") color _sbkgr
-  @ 2,_fco1+18 get da  picture "@D" valid {||setpos(2,_fco1+31),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),.t.}
-  @ 2,_fco1+29 get kon valid {||setpos(2,_fco1+31),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),aczojs(posilki)}
+  @ 2,_fco1+41 say if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak") color _sbkgr
+  @ 2,_fco1+18 get da  picture "@D" valid {||setpos(2,_fco1+41),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),.t.}
+  @ 2,_fco1+29 get kon valid {|y|y:=aczojs(posilki),devout(posilki[max(1,ascan(posilki,kon))],_sbkgr),setpos(2,_fco1+41),devout(if(menu->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),y}
   __setproc(procname(0))
 return
 *************
@@ -341,16 +344,8 @@ local i,j,k,l,a,b,g:='',h:=''
 
 return pad(d,len(relewy->dieta))
 ***************
-static proc zdok3(_f,getlist,poprec,keyp,startrec)
-//static proc zdok3(_f)
-  local i,j,k,l,rec,mes,a,b,c,d,e,f:={},g,h
-  dok3(_f,getlist,@poprec,@keyp,@startrec)
-  @ 2,_fco1+7 SAY strpic(WARTOSC/ile_pos,7,A_ZAOKR,"@E ",.t.) color _sbkgr
-  if adat#dtos(relewy->data)+relewy->posilek
-     aZap:={{},{},{}}
-     apos:=1
-     adat:=dtos(relewy->data)+relewy->posilek
-     aflag:=.f.
+func mk_azap(aDat)
+local aZap:={{},{},{}},rec,mes,d,e,f:={},i,j
 #ifdef A_DODATKI
   if menu->(dbseek(adat)) .and. (menu->ile_pos<>0 .or. relewy->ile_pos<>0)
 #else
@@ -386,14 +381,14 @@ static proc zdok3(_f,getlist,poprec,keyp,startrec)
                  aadd(aZap[3],trim(surowce->nazwa)+" ("+left(dania->nazwa,at(" ",dania->nazwa)-1)+") "+strtran(ltrim(str(e*ilosc/surowce->przel,8,3)),".000","")+" "+trim(surowce->jmaG))
 #else
 #ifdef A_DISUM
-              i:=ascan(aZap[1],i2bin(surowce->(recno())))
+              i:=ascan(aZap[1],surowce->(recno()))
               if i<>0 .and. round(azap[2,i,1]-ilosc,3)=0 .and. diand(d,subs(azap[1,i],3),f)='~'
                  aZap[1,i,2]:=dior(d,azap[1,i,2],f)
                  aZap[2,i,2]+=e
                  aZap[3,i]+=",("+left(dania->nazwa,at(" ",dania->nazwa)-1)+") "+strtran(ltrim(str(e*ilosc/surowce->przel,8,3)),".000","")+" "+trim(surowce->jmaG)
               else
 #endif
-                 aadd(aZap[1],{i2bin(surowce->(recno())),d})
+                 aadd(aZap[1],{surowce->(recno()),d})
                  aadd(aZap[2],{ilosc,e})          //e*ilosc/surowce->przel)
                  aadd(aZap[3],trim(surowce->nazwa)+" ("+left(dania->nazwa,at(" ",dania->nazwa)-1)+") "+strtran(ltrim(str(e*ilosc/surowce->przel,8,3)),".000","")+" "+trim(surowce->jmaG))
 #ifdef A_DISUM
@@ -432,6 +427,20 @@ static proc zdok3(_f,getlist,poprec,keyp,startrec)
      go rec
      lock
   endif
+
+return aZap
+***************
+static proc zdok3(_f,getlist,poprec,keyp,startrec)
+//static proc zdok3(_f)
+  local i,j,k,l,rec,mes,a,b,c,d,e,f:={},g,h
+  dok3(_f,getlist,@poprec,@keyp,@startrec)
+  @ 2,_fco1+7 SAY strpic(WARTOSC/ile_pos,7,A_ZAOKR,"@E ",.t.) color _sbkgr
+  if adat#dtos(relewy->data)+relewy->posilek
+     adat:=dtos(relewy->data)+relewy->posilek
+     azap:=mk_azap(adat)
+     //aZap:={{},{},{}}
+     apos:=1
+     aflag:=.f.
   endif
   if len(azap[1])>0
      @ 3,_fco1+15 say 'F8' color _sbkgr
@@ -652,7 +661,7 @@ static function danval(_f,getlist)
 
 field danie,posilek,DATA,nazwa,gramatura,jedn,dieta,opis
 
-LOCAL Z,s
+LOCAL Z,s,pg
   if empty(dan)
      dania->(dbgoto(0))
      menu->(dbgoto(0))
@@ -692,12 +701,17 @@ LOCAL Z,s
   else
 #endif
 
+#ifdef A_WAGI
+  pg:=subs(Memvar->PosGr,at(relewy->posilek,PosStr),1)
+#else
+  pg:=relewy->posilek
+#endif
  select dania
  set order to tag dan_naz
 
-  Z:=szukam({0,min(maxcol()-60,col()),maxrow(),,1,len(relewy->posilek+trim(dan)),;
+  Z:=szukam({0,min(maxcol()-60,col()),maxrow(),,1,len(trim(dan))+1,;
      'Danie',{||posilek+"/"+nazwa+if(""=opis,if(sklad->(dbseek(dania->danie)),"³","|"),"&")+dieta+"³"+gramatura+" "+jedn},;
-    {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',relewy->posilek,dan))})
+    {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',pg,dan))})
  SET ORDER TO tag dan_kod
 #ifdef A_DODATKI
  endif
@@ -709,10 +723,12 @@ LOCAL Z,s
     z:={dania->(recno()),menu->(recno())}
     pop_stat(s)
     dania->(dbgoto(z[1]))
+#ifdef A_DODATKI
     menu->(dbgoto(z[2]))
     if menu->ile_pos=0
        menu->(dbgoto(0))
     endif
+#endif
     getlist[3]:display()
     eval(getlist[3]:postblock,getlist[3])
     updated(.t.)

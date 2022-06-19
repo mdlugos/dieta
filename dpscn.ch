@@ -1,10 +1,18 @@
 #include "lan.ch"
+#define A_NORMY
 #define PC852
+#define PLWIN
 #define A_DDBF
 #define A_CDX DBFCDX
+#define A_DILTH 9
+#define A_GREX
+#define A_ZAP_DAN
+#define PROC_EN memvar->proc_en
+#define A_WO_JAD '  3'
+#define A_MALWA
 #define UpP(x) UPPER(x)
 #command INIT SCREEN =>
-#command INIT PRINTER => qqout(eval(memvar->p_init,wasbad))
+#command INIT PRINTER => specout(eval(memvar->p_init,wasbad))
 //"&l3A(17U(s10h12V")
 #define A_PCL
 #define A_GETLPT    eval(memvar->do_getlpt)
@@ -27,3 +35,4 @@
 #define A_AUTOR   "A.D. 1991-2010, Marek Dˆugosz, Cieszyn, ul. R¢wna 16, tel. 338522553"
 #define DatE()    MEMVAR->dzisiaj
 #define A_LPNUM 2
+#define A_BACKUP memvar->backup

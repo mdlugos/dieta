@@ -214,7 +214,7 @@ field data,kod_osoby,danie,skladnik,element
 local i,ye:=year(date()),a,txt
 
 select RELEWY
-go top
+seek "1"
 a:={}
 DO while !eof() .and. year(data)<ye
    txt:=STR(year(data),4)
@@ -243,7 +243,6 @@ endif
 
 begin sequence
 
-   altd()
    ?
    ? "Tworzenie kartoteki STARY."
    mkdir(defa+ye)
@@ -699,7 +698,7 @@ LOCAL txt,carry,carry_key,carry_di,carry_1,carry_di_1,i,di,ko,da,w,bir,bit,x,tot
 memvar mies_rob,posilki,diety
 field data,nr_zlec,posilek,ile_pos,dieta,nr_mag,pozycja,wartosc,wart_tot,d_wartosc,smb_dow,nr_dowodu,grupa
 
-SELECT 0
+SELECT (select('DATY'))
 di:=getenv("MAGDEF")
 if empty(di)
   x:=rat(HB_OsPathSeparator(),left(defa,len(defa)-1))
@@ -751,6 +750,8 @@ if pcount()<2
   endif
 endif
 mies_rob:=min(zmienna1+1,do)
+USE
+SELECT (select('TMP'))
 USE (di+"MAIN") READONLY ALIAS MAGAZYN SHARED
 if pcount()<2
 @ 23,0 say "Prosz© chwil© poczekaÜ "
@@ -782,8 +783,9 @@ devout(".","*W")
 setpos(23,0)
 endif
 #ifdef A_WIN_PRN
-  if A_WIN_PRN
+  if !empty(A_WIN_PRN)
     oprn:=.f.
+    erase import.prn
     set printer to import.prn
   endif
 #endif
@@ -812,7 +814,8 @@ carry_key:="";tot_rec:=tot_w:=0
 BEGIN SEQUENCE
 ordcreate('TMP','TMP',w,bit)
 DO WHILE relewy->( data<=do .and. !eof() ) .or. data<=do .and. !eof()
-  TXT:=trim(DTOS(DATA)+subs(nr_zlec,2))
+  //TXT:=trim(DTOS(DATA)+subs(nr_zlec,2))
+  TXT:=dseek(,'data,nr_zlec',data,Trim(nr_zlec))
   da:=data
   ko:=subs(nr_zlec,2,1)
   di:=trim(subs(nr_zlec,3))
@@ -873,8 +876,8 @@ endif*/
 #endif
   ENDIF
   w:=0
-  IF trim(RELEWY->(dtos(data)+posilek+dieta))==txt  //dtos(data)+subs(nr_zlec,2)
-     exec {||w-=wartosc} WHILE TRIM(DTOS(DATA)+SUBS(NR_ZLEC,2))==TXT REST
+  IF RELEWY->(dseek(,'data,posilek,dieta',data,posilek,trim(dieta)))==txt  //dtos(data)+subs(nr_zlec,2)
+     exec {||w-=wartosc} WHILE dseek(,'data,nr_zlec',data,Trim(nr_zlec))==TXT REST
      w:=ROUND(w,2)
   ENDIF
 #ifdef A_AUTOKOR
@@ -908,6 +911,7 @@ endif*/
      ?? DAta,posilek,dieta,STRPIC(WART_TOT,12,A_ZAOKR,"@E "),Ile_pos
      ?? " NIKT NIE JADù !!!"
      ?
+     set print off
   ELSEif pcount()<2
      ?? DA,ko,di,STRPIC(W,12,A_ZAOKR,"@E "),I,STRPIC(W/I,7,A_ZAOKR,"@E ",.t.)
      setpos(row(),0)
@@ -930,6 +934,7 @@ endif*/
      ?? DATA,posilek,dieta,STRPIC(WARTOSC,12,A_ZAOKR,"@E "),ILE_POS
      ?? " ZDUBLOWANY - WYKASOWAùEM !!!"
      ?
+     set print off
      skip
   enddo
   if carry_key#dtos(data)+posilek .and. carry_key#dtos(TMP->data)+subs(TMP->nr_zlec,2,1)
@@ -950,6 +955,7 @@ endif*/
          ?? DAta,posilek,dieta,STRPIC(W,12,A_ZAOKR,"@E "),Ile_pos
          ?? " DARMOWY !!!"
          ?
+         set print off
        endif
        SKIP
      END
@@ -968,7 +974,9 @@ END
        set printer to
        Print(1)
        aeval(x,{|y|wqq(y),wq()})
-       oprn:destroy()
+       if !empty(oprn)
+          oprn:destroy()
+       endif
        oprn:=NIL
      endif
   endif
@@ -981,6 +989,7 @@ END
 #endif
   set print to
 SELECT TMP
+ZAP
 USE
 ferase(set(_SET_DEFAULT)+"tmp.dbf")
 ferase(set(_SET_DEFAULT)+"tmp"+ordbagext())

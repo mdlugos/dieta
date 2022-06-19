@@ -1,9 +1,13 @@
 #include "lan.ch"
 #define A_MYSZ
 #define PC852
-#define PLWIN
+//#define PLWIN
 #command INIT SCREEN =>
-#command INIT PRINTER => qqout(eval(memvar->p_init,wasbad))
+#command INIT PRINTER => specout(eval(memvar->p_init,wasbad))
+#define A_GETLPT   eval(memvar->do_getlpt)
+#define A_PRINT(x) eval(memvar->do_print,x)
+#define A_EXT WIN_PRINTFILERAW
+#define A_STOPKA 'Program: System Dieta, '+wersja()+', producent: Firma Usˆug Informatycznych Marek Dˆugosz, 43-400 Cieszyn, ul. R¢wna 16'
 #define PROC_EN memvar->proc_en
 #define A_15CPI
 #define A_15CALI
@@ -15,16 +19,17 @@
 #define A_DDBF
 #define A_SET_DAT GERMAN
 #define STANY     INDX_MAT
+#define A_KODY    "Alergen"
 #define A_JMALT
 #define A_NOZAP
-#define A_SUMK    -43138968948
+#define A_SUMK    -42464526415
 #define A_KOMU_N  'Dom Pomocy Spoˆecznej - "Dom Nauczyciela"'
 #define A_KOMU_A  "Bielsko-Biaˆa, ul. Pocztowa 14a"
-#define A_AUTOR   "A.D. 1991-2005, Marek Dˆugosz, Cieszyn, ul. R¢wna 16, tel. (0-33)8522553"
+#define A_AUTOR   "A.D. 1991-2015, Marek Dˆugosz, Cieszyn, ul. R¢wna 16, tel. 338522553"
 #define A_DIETA   ! alias()$"ZAPOT,SUROWCE"
 #define A_FILELIMIT '48'
 #define A_LPNUM 2
 #define A_DILTH 4
 #define A_DISUM
-#define A_BACKUP (memowrit(defa+'bejkap.bat','lha u -rx dieta '+defa+' *.db? *.ini *.bat *.pp?'+chr(13)+chr(10)+'xcopy /D /I /Y *.lzh %1\'+dtos(date())),errorlevel(41))
-//#define PROC_EN
+//#define A_ZAP_DAN
+#define A_BACKUP  defa+'bejkap.bat'

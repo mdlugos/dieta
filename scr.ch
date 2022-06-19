@@ -1,9 +1,11 @@
 #include "lan.ch"
 #ifdef __PLATFORM__WINDOWS
-//#define PLWIN
-//#define A_WIN_PRN .t.
+#define PLWIN
+#define A_WIN_PRN .t.
+#define A_STOPKA 'Program: System Dieta, '+wersja()+', producent: Firma Usˆug Informatycznych Marek Dˆugosz, 43-400 Cieszyn, ul. R¢wna 16'
 #endif
 #define A_DILTH 9
+#define A_GREX
 #define A_MYSZ
 #define A_SCR
 #define PROC_EN memvar->proc_en
@@ -14,6 +16,7 @@
 #command INIT PRINTER => qqout(eval(MEMVAR->p_init,wasbad))
 #define A_GETLPT   eval(memvar->do_getlpt)
 #define A_PRINT(x) eval(memvar->do_print,x)
+#define A_BACKUP MEMVAR->backup
 #define PC852
 #define A_PCL
 #define A_XPRN
@@ -24,10 +27,10 @@
 #define DatE() MEMVAR->dzisiaj
 #define A_SET_DAT GERMAN
 #define STANY     INDX_MAT
-#define A_SUMK    -41538646244
-#define A_KOMU_N  'SPZOZ —l¥skie Centrum Rehabilitacji'
+#define A_SUMK    -37773342968
+#define A_KOMU_N  '—l¥skie Centrum Rehabilitacji i Prewencji'
 #define A_KOMU_A  "Ustroä, ul. Zdrojowa 6"
-#define A_AUTOR   "A.D. 2011, Marek Dˆugosz, Cieszyn, ul. R¢wna 16, tel. 338522553"
+#define A_AUTOR   "A.D. 2011-2016, Marek Dˆugosz, Cieszyn, ul. R¢wna 16, tel. 338522553"
 #define A_DIETA
 #define A_FILELIMIT '45'
 #define A_NOZAP

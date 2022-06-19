@@ -1,6 +1,6 @@
 field   grupa,posilek,dieta,opis,data,path,nazwa,cena
 
-MEMVAR  grupy,narzuty,diety,posilki,grstr,dietystr,posstr,firma_n,_snorm,level1,stary_rok,defa,cennik,dzisiaj,dietylong,_sbkgr,_sbnorm
+MEMVAR  grupy,narzuty,diety,posilki,posgr,grstr,dietystr,posstr,firma_n,_snorm,level1,stary_rok,defa,cennik,dzisiaj,dietylong,_sbkgr,_sbnorm
 #ifdef A_XPRN
 memvar apcomp,p_pcl,landscape
 #endif
@@ -18,7 +18,7 @@ request A_EXT
 #endif
 PROCEDURE MAIN(parametr)
 
-local scr_menu,menu,i,txt
+local scr_menu,menu,i,txt,a
 
 #ifdef PLWIN
    hb_gtInfo( HB_GTI_WINTITLE , "Dieta" )
@@ -39,11 +39,25 @@ IF ""#defa .and. right(defa,1)<>HB_OsPathSeparator()
    defa+=HB_OsPathSeparator()
 endif
 
-if ""=defa
-  defa:="."+HB_OsPathSeparator()
-  SET PATH TO (defa)
+#ifdef __PLATFORM__UNIX
+  a:=curdir()+HB_OsPathSeparator()
+#else
+  a:=DiskName()+':'+HB_OsPathSeparator()+curdir(DiskName())+HB_OsPathSeparator()
+#endif
+
+if defa='.'+HB_OsPathSeparator()
+   defa:=a+subs(defa,3)
+elseif defa='..'+HB_OsPathSeparator()
+   i:=rat(HB_OsPathSeparator(),left(a,len(a)-1))
+   if i>0
+     defa:=left(a,i)+subs(defa,4)
+   endif
+endif
+
+if ""=defa .or. defa==a
+  SET PATH TO (defa:=a)
 else
-  SET PATH TO ("."+HB_OsPathSeparator() +HB_OsPathListSeparator()+defa)
+  SET PATH TO (a+HB_OsPathListSeparator()+defa)
 endif
 
 SETPOS(3,0)
@@ -79,11 +93,8 @@ set default to (defa+"roboczy"+HB_OsPathSeparator())
 #endif
 #endif
 
-#ifdef A_GOCZ
-   memvar->p_jadinit:={||firma_n}
-#endif
+i:={maxrow(),maxcol(),}
 
-i:={maxrow(),maxcol()}
    txt:="dieta.ini"
    do while inirest(@txt)
    (&txt,txt:=NIL)
@@ -98,9 +109,15 @@ i:={maxrow(),maxcol()}
      (&txt,txt:=NIL)
    enddo
 
-txt:=savescreen(0,0,i[1],i[2])
-clear screen
-restscreen(0,0,i[1],i[2],txt)
+
+   if maxrow()>i[2] .or. maxcol()>i[2]
+     i[1]:=min(i[1],maxrow())
+     i[2]:=min(i[2],maxcol())
+     i[3]:=savescreen(0,0,i[1],i[2])
+     clear screen
+     restscreen(0,0,i[1],i[2],i[3])
+   endif
+
    readinit()
    reuse()
 
@@ -267,6 +284,10 @@ set device to screen
 ********************************
 IF tak("CZY ARCHIWOWAè",18,,.t.,.F.)
 #ifdef A_BACKUP
+    CLOSE ALL
+#ifdef __HARBOUR__
+    hb_idlesleep(0.2)
+#endif
     __RUN( A_BACKUP )
 #else
     ERRORLEVEL(41)
@@ -280,7 +301,7 @@ SET CURSOR ON
 return
 *****************
 proc readinit
-public grupy:={},posilki:={},DIETY:={},PosStr:="",DietyStr:="",GrStr:=""
+public grupy:={},posilki:={},PosGr:='',DIETY:={},PosStr:="",DietyStr:="",GrStr:=""
 #ifdef A_XPRN
 public apcomp:={}
 #endif
@@ -293,6 +314,12 @@ public cennik:={}
 #else
 #define D_CENNIK
 #endif
+#ifdef A_WAGI
+#define D_WAGI ,PosGr+=Grupa
+#else
+#define D_WAGI
+//,PosGr+=Posilek
+#endif
 sel('grupy',,,.t.)
 #ifdef A_NARZUT
 PUBLIC narzuty:={}
@@ -302,7 +329,7 @@ dbeval({||aadd(grupy,grupa+" "+opis), GrStr+=grupa },,{||grupa#' '},,,.f.)
 #endif
 use
 sel('posilki',,,.t.)
-dbeval({||aadd(posilki,posilek+" "+opis), PosStr+=posilek D_CENNIK},,{||posilek#' '},,,.f.)
+dbeval({||aadd(posilki,posilek+" "+opis), PosStr+=posilek D_WAGI D_CENNIK},,{||posilek#' '},,,.f.)
 use
 sel('diety',,,.t.)
 #ifdef A_GOCZ
@@ -345,6 +372,9 @@ set default to (defa+if(stary_rok#NIL,stary_rok,"roboczy")+HB_OsPathSeparator())
       SEL("sklad",2)
       SEL("elementy",2)
       sel("zawar",2)
+#ifdef A_NORMY
+      sel("normy",1)
+#endif
 #ifdef A_ELZ
       sel("cennik",1)
 #endif

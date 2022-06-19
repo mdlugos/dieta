@@ -1,38 +1,25 @@
 #include "dm_form.ch"
 
-static poprec,oldrec,keyp,startrec,curprompt,nowy,kon,na,gra,jed,die,op,il,di
+static poprec,oldrec,keyp,startrec,curprompt,nowy,pg,na,gra,jed,die,op,il,di
 
 MEMVAR CHANGED,diety,posilki,grupy,mies_rob
 
 field posilek,danie,ilosc,gramatura,jedn,skladnik,nazwa,indx_mat,przel,dieta,gram,data,opis,jmaG,cena,pozycja
 
-*****************
-func SURowce(upden)
-DEFAULT upden TO .t.
-SELECT SUROWCE
-SET ORDER TO tag sur_naZ
 #ifdef A_MYSZ
 #define D_MYSZ ,bx,cx,dx,myszflag
 #else
 #define D_MYSZ
 #endif
-select zawar
-set order to tag "zaw_skl"
-#ifdef A_ELZ
-select cennik
-set order to 1
-select surowce
-set relation to skladnik into cennik
-return SZUKAM({0,maxcol()/2-35,,,1,0,"PRZEGL¤D SUROWCàW CENA DATA",{||NAZWA+if(zawar->(found()),"³","!")+jmaG+'³'+str(cennik->cena)+'³'+dtoc(cennik->data)},{|_skey,_s D_MYSZ|if(upden .and. _skey=13,_skey:=9,),sur(_skey,_s,upden D_MYSZ)},""})
+#ifdef __HARBOUR__
+#define D_REST 4
 #else
-select surowce
-set relation to skladnik into zawar
-return SZUKAM({0,maxcol()/2-20,,,1,0,"PRZEGL¤D SUROWCàW",{||NAZWA+if(zawar->(found()),"³","!")+jmaG},{|_skey,_s D_MYSZ|if(upden .and. _skey=13,_skey:=9,),sur(_skey,_s,upden D_MYSZ)},""})
+#define D_REST 2
 #endif
 *****************
 func rec_in(deep,n)
 
-local stat,r,vars:={poprec,oldrec,keyp,startrec,curprompt,nowy,kon,na,gra,jed,die,op,il,di}
+local stat,r,vars:={poprec,oldrec,keyp,startrec,curprompt,nowy,pg,na,gra,jed,die,op,il,di}
 if keyp#NIL
    deep=.t.
 endif
@@ -56,7 +43,7 @@ begin sequence
 
   curprompt:=trim(nazwa)+" "+trim(dieta)+" "+trim(gramatura)+" "+trim(jedn)
 
-  kon:=posilek
+  pg:=posilek
 
 	select sklad
     SET ORDER TO tag skl_dan
@@ -102,7 +89,7 @@ keyp:=vars[3]
 startrec:=vars[4]
 curprompt:=vars[5]
 nowy:=vars[6]
-kon:=vars[7]
+pg:=vars[7]
 na:=vars[8]
 gra:=vars[9]
 jed:=vars[10]
@@ -128,7 +115,9 @@ stat PROC RDOK1(_f)
 RETURN
 ***********
 stat proc rdok2(_f,getlist)
-  local now
+  memvar posgr
+  local now,apg
+
   select dania
   na:=nazwa
   gra:=gramatura
@@ -136,7 +125,15 @@ stat proc rdok2(_f,getlist)
   die:=dieta
   op:=if(""=opis,"bez uwag",opis)
   now:=if(nowy,"NOWY   ","POPRAWA")
-  @  1,_fco1+1 get kon valid aczojs(posilki)
+#ifdef A_WAGI
+#define posIlki apg
+  apg:={}
+  aeval(posilki,{|x,y|if(left(x,1)$posgr,aadd(apg,x),)})
+#endif
+  @  1,_fco1+1 get pg valid aczojs(posIlki)
+#ifdef posIlki
+  #undef posIlki
+#endif
   @  1,_fco1+3 get NA picture "@KS"+ltrim(str(_fco2-_fco1-4))
   @  2,_fco1+2 get now picture "@K" valid {||nowy:=if(now=" ",!nowy,nowy),now:=if(nowy,"NOWY   ","POPRAWA"),.t.}
   @  2,_fco1+21 get gra picture "@K" valid {||gra:=padl(trim(gra),4),.t.}
@@ -166,9 +163,9 @@ stat proc rdok3(_f)
     if nowy
       nowy:=.f.
       set order to tag dan_naz
-      if dbseek(dseek(,'posilek,nazwa',kon,na)).and.gra+jed+die=gramatura+jedn+dieta .OR. empty(NA)
+      if dbseek(dseek(,'posilek,nazwa',pg,na)).and.gra+jed+die=gramatura+jedn+dieta .OR. empty(NA)
         @ 5,_fco1,6,_fco2 BOX 'º ºº¼ÄÈº ' color _sbkgr
-        RESTSCREEN(1+2*_fskip+_frow,_fco1,maxrow(),_fco2,SUBSTR(_fscr,(_fco2-_fco1+1)*2*(1+2*_fskip+_frow)+1))
+        RESTSCREEN(1+2*_fskip+_frow,_fco1,maxrow(),_fco2,SUBSTR(_fscr,(_fco2-_fco1+1)*(1+2*_fskip+_frow)*D_REST+1))
         _fpopkey:=.f.
         return
       endif
@@ -217,7 +214,7 @@ stat proc rdok3(_f)
       lock
     endif
     NAZWA:=NA
-    posilek:=KON
+    posilek:=pg
     dieta:=die
     jedn:=jed
     gramatura:=gra
@@ -387,272 +384,3 @@ stat func showzaw(_f)
   @ _fk,_fco1+35 say surowce->jedN color _sbkgr
 return .t.
 *****************
-FUNCTION SURVAL(_f,getlist,na,poprec,oldrec,startrec,aflag,apos)
-
-local da,sk,su,re,za,znalaz,sel
-
-/*
-#ifdef A_GOCZ
-if empty(na)
-   return .t.
-endif
-#endif
-*/
-if na=surowce->nazwa .and. !surowce->(eof())
-   return .t.
-endif
-sel:=select()
-da:=dania->(recno())
-sk:=sklad->(recno())
-re:=relewy->(recno())
-za:=zapot->(recno())
-#ifdef A_ELZ
-select cennik
-set order to 1
-select surowce
-su:=recno()
-SET ORDER TO tag sur_naZ
-set relation to skladnik into cennik
-znalaz:=SZUKAM({0,,maxrow(),maxcol(),1,len(trim(na)),"PRZEGL¤D SUROWCàW",if(alias(sel)="ZAPOT",{||NAZWA+"³"+jmaG+"³"+str(cennik->cena)+'³'+dtoc(cennik->data)},{||NAZWA+"("+jmaG+")³"+surowce->jedN}),{|k,s D_MYSZ|sur(k,s,.t. D_MYSZ)},UpP(trim(na))})
-#else
-select surowce
-su:=recno()
-SET ORDER TO tag sur_naZ
-znalaz:=SZUKAM({0,min(col(),maxcol()-30),maxrow(),,1,len(trim(na)),"PRZEGL¤D SUROWCàW",if(alias(sel)="ZAPOT",{||NAZWA+"³"+jmaG},{||NAZWA+"("+jmaG+")³"+surowce->jedN}),{|k,s D_MYSZ|sur(k,s,.t. D_MYSZ)},UpP(trim(na))})
-#endif
-  set order to tag sur_kod
-  select zapot
-  SET ORDER TO tag zap_rel
-    SET RELATION TO
-    goto za
-  select relewy
-    goto re
-  select dania
-    SET ORDER TO tag dan_kod
-    goto da
-  select sklad
-    SET ORDER TO tag skl_dan
-    SET RELATION TO
-  goto sk
-  select (sel)
-if znalaz
-  IF _fnowy .and. oldrec#0 .and. surowce->(recno())#su
-    if aflag
-       --apos
-    else
-       poprec:=startrec
-    endif
-  ENDIF
-  na:=surowce->nazwa
-  //getlist[1]:varput(surowce->nazwa)
-  updated(.t.)
-  return .t.
-endif
-aflag:=.f.
-surowce->(dbgoto(su))
-RETURN .F.
-**************************
-function sur(_skey,_s,upden D_MYSZ)
-field index,nazwa,stan,jm,waznosc,data_przy
-static choice:=0
-local stat
-do case
-  CASE _SKEY=0 .and. alias()="SUROWCE"
-    _swar=&('{|p|'+IndexkeY(0)+'=p'+'}')
-    if ! ( (eval(_swar,_spocz).or.dbseek(_spocz)).and._skip(0,,_s) )
-			_spocz=LEFT(_spocz,len(_spocz)-_slth)
-			_slth=0
-      _sef:=.f.
-      if !eval(_swar,_spocz)
-         _skip(-1,,_s)
-         if !eval(_swar,_spocz)
-            seek _spocz
-         endif
-      endif
-    endif
-    set cursor on
-#ifdef A_MYSZ
-    _skproc[14]:=NIL
-
-   case _skey=14
-    if bx=1.and.dx=_srow1+_sm-1.and.cx>_scol2-5.and.cx<_scol2
-       evakey(22,_s)
-	else
-       return mysz(_s,bx,cx,dx,myszflag)
-	endif
-#endif
-
-  case _skey=27
-		return .t.
-
-   case _skey=43
-      go _srec[_sm]
-      _slth=_slth-1
-      _spocz=left(_spocz,LEN(_spocz)-1)
-    private changed:=.f.
-    _skey:=sur_in(!upden,.t.)
-    if changed==.t.
-      if alias()='SUROWCE'
-         go _skey
-      endif
-      if ! eval(_swar,_spocz)
-        if _slth=0
-           dbseek(_spocz)
-        else
-        _spocz=LEFT(_spocz,len(_spocz)-_slth)
-        _slth=0
-       endif
-      endif
-      refresh(,_s)
-    elseif upden
-      go _srec[_sm]
-      REFRESH LINE _srow1-1+_sm DIRECTION 0
-    endif
-    return .t.
-
-      
-  case _skey=22
-
-     private changed:=.f.
-
-    _skey:=sur_in(!upden,.f.)
-
-    if changed==.t.
-      if alias()='SUROWCE'
-         go _skey
-      endif
-      if ! eval(_swar,_spocz)
-        if _slth=0
-           dbseek(_spocz)
-        else
-        _spocz=LEFT(_spocz,len(_spocz)-_slth)
-        _slth=0
-       endif
-      endif
-      refresh(,_s)
-    elseif upden
-      go _srec[_sm]
-      REFRESH LINE _srow1-1+_sm DIRECTION 0
-    endif
-
-  CASE _si=0
-  case _skey=9 .or. _skey=92  //asc('\')
-    stat:=push_stat()
-#ifdef A_ELZ
-    if _skey=92
-       go _srec[_sm]
-       _slth=_slth-1
-       _spocz=left(_spocz,LEN(_spocz)-1)
-       choice:=4
-    else
-       alarm("WYBIERZ CO—:",{"DANIA","ZAPOTRZEBOWANIE","STANY MAGAZYNOWE","CENNIK"},@choice)
-    endif
-    if choice=1
-#else
-    if alarm("WYBIERZ CO—:",{"DANIA","ZAPOTRZEBOWANIE","STANY MAGAZYNOWE"},@choice)=1
-#endif
-       select dania
-       set order to tag dan_kod
-       select sklad
-       set order to tag skl_skl
-       set relation to danie into dania
-       dbseek(surowce->skladnik,.f.)
-       szukam({1,min(maxcol()-60,col()+5),maxrow(),,0,0,'Danie',{||dania->(nazwa+if(""=opis,"³","&")+left(dieta,A_DILTH)+"³"+gramatura+" "+jedn)},{|_skey,_s D_MYSZ|_skey:=if(_skey=13,9,_skey),danszuk(_skey,_s,upden D_MYSZ)},surowce->skladnik})
-    elseif choice=2
-       select zapot
-       set order to tag zap_skl
-        set relation to RELEWY->(dseek(,'data,posilek,dieta',zapot->data,zapot->posilek,'')) into relewy
-       dbseek(surowce->skladnik,.f.)
-       szukam({1,min(maxcol()-27,col()+5),maxrow(),,1,6,"dataÄÄÄÄÂile "+trim(surowce->jmaG),{||tran(Dtos(data)+posilek+dieta,"@R ####.##.##|X|"+REPLICATE("X",A_DILTH))+"³"+str(ILOSC)},{|k,s|RELe(k,s,upden)},surowce->skladnik+left(dtos(mies_rob),6)})
-    elseif choice=3
-       SZUKAM({1,1,maxrow(),,1,0,"PRZEGL¤D MAGAZYNU SPO½YWCZEGO",{||INDEX+"³"+NAZWA;
-       +IF(WAZNOSC>0 .and. STANY->STAN>0 .and. STANY->DATA_PRZY+WAZNOSC<date(),"ð","³");
-       +STR(STANY->STAN)+" "+JM},{|_skey,_s D_MYSZ|if(_skey=13,.f.,STANMAG(_skey,_s D_MYSZ))},trim(surowce->indx_mat),.F.})
-#ifdef A_ELZ
-    elseif choice=4
-       select cennik
-       setpos(row()+2,col())
-       dbseek(surowce->skladnik)
-       szukam({,,,,0,,'Cena za '+surowce->jmaG,{||dtoc(data)+"|"+str(cena)},{|k,s|cen(k,s)},surowce->skladnik+chr(0),surowce->skladnik+chr(255)})
-       dbseek(surowce->skladnik,.f.)
-       select surowce
-       REFRESH LINE _srow1-1+_sm DIRECTION 0
-#endif
-    endif
-    pop_stat(stat)
-    if _skey>=32
-       return .t.
-    endif
-
-   case _skey=13
-		return _sret:=.t.
-   case _skey=-8
-      _sfil(_s)
-      
-   case _skey=-9
-      _slist(".\"+left(alias(),3)+"*.frm",_s)
-
-endcase
-return .f.
-#ifdef A_ELZ
-**************************
-function cen(_skey,_s)
-LOCAL c,d,getlist
-do case
-   case _skey=27
-    return .t.
-   case _skey=22 .or. _skey=asc('+')
-    d:=DatE()
-    if _si=0
-         _srec[1]=recno()
-         _sm=1
-         go lastrec()+1
-    elseif _skey=asc('+')
-       go _srec[_sm]
-       _slth=_slth-1
-       _spocz=left(_spocz,LEN(_spocz)-1)
-    else
-         lock
-         d:=data
-    endif
-    c:=cena
-    getlist:={}
-    @ _srow1+_sm-1,_scol1 get d
-    getl c picture "@K"
-    read
-    if readkey()#27 .and. updated()
-      if empty(c) .or. empty(d)
-         delete
-      elseif d=data .and. c#cena .or. d<=data .and. c=cena
-         cena:=c
-         data:=d
-      else
-        append blank
-        data:=d
-        cena:=c
-        skladnik:=surowce->skladnik
-      endif
-    endif
-    refresh(,_s)
-    if _skey>=32
-       return .t.
-    endif
-
-  case _skey=19
-       kibord(chr(27)+chr(5)+'\')
-
-  case _skey=4
-       kibord(chr(27)+chr(24)+'\')
-
-  CASE _si=0
-
-  case _skey=-8
-      _sfil(_s)
-      
-  case _skey=-9
-      _slist(".\"+left(alias(),3)+"*.frm",_s)
-
-endcase
-return .f.
-***********
-#endif

@@ -1,15 +1,16 @@
 #include "lan.ch"
 #define MAG_BIEZ " 6"
 #define A_WAGI
-#define PROC_EN
+#define PROC_EN {{'  4',4,' 81',},{'  5',9,' 82',},{'  9',4,' 83',}}
+#define A_WO_JAD '  3'
 #define A_DDBF
 #define PC852
-#ifdef __PLATFORM__Windows
-#define A_CDX ADS
+//#ifdef __PLATFORM__Windows
+//#define A_CDX ADS
 //#define IndexkeY(x) strtran(indexkey(x),'UPPER(','UPP(')
-#else
+//#else
 #define A_CDX DBFCDX
-#endif
+//#endif
 #define UpP(x) UPPER(x)
 //#define A_POLOWA
 //#define A_DODATKI //iložci posi’k¢w w zapotrzebowaniu i menu
@@ -28,6 +29,7 @@
 #define A_SET_DAT GERMAN
 #define STANY   INDX_MAT
 #define A_DIETA  .t. // ! alias()$"ZAPOT,SUROWCE"
+#define A_DILTH 4
 #define A_FILELIMIT '45'
 #define A_MYSZ
 #define A_NOZAP

@@ -6,7 +6,7 @@
 //#define jedN jm_opcja
 //#define indx_maT index
 #define A_CDX DBFCDX
-//#define A_MYSZ
+#define A_MYSZ
 //-------------------------
 //#define A_CENPOS
 #define A_GREX

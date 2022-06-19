@@ -1,10 +1,10 @@
 #include "lan.ch"
+#define A_DILTH 4
 #define PC852
+#define PLWIN
+#define A_WIN_PRN eval(memvar->get_oprn)
 #define A_CDX DBFCDX
-#ifndef __HARBOUR__
 #define UpP(x) UPPER(x)
-#endif
-//#define A_STYLUS
 #define A_XPRN
 #define A_PCL
 #define isPrinter (.t.)
@@ -14,7 +14,7 @@
 //#define ZAP_BIEZ memvar->zap_biez
 //#define A_GOCZ
 #command INIT SCREEN =>
-#command INIT PRINTER => qqout(eval(MEMVAR->p_init,wasbad))
+#command INIT PRINTER => specout(eval(MEMVAR->p_init,wasbad))
 #define A_DRUKCOMP
 #define DTOV(dat) tranr(subs(dtos(dat),5),"##.##")
 #define DatE() MEMVAR->dzisiaj
@@ -32,5 +32,7 @@
 #define A_DDBF
 #define A_SWW
 #define A_WAGI
+#define A_KODY "alergen"
+#define A_STOPKA 'Program: System Dieta, '+wersja()+', producent: Firma Usˆug Informatycznych Marek Dˆugosz, 43-400 Cieszyn, ul. R¢wna 16'
 #define PROC_EN memvar->proc_en
 //#define A_BACKUP MEMVAR->backup

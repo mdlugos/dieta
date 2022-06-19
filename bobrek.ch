@@ -1,4 +1,4 @@
-#include "mdstd.ch"
+#include "lan.ch"
 #ifdef __PLATFORM__WINDOWS
   #define PLWIN
   #define A_STYLUS
@@ -8,12 +8,16 @@
   #define A_PCL
 //  #define A_WIN_PRN .t.
 #endif
+#define PROC_EN  memvar->proc_en
+#define A_WO_JAD "  3"
+#define A_DDBF
+#define A_BACKUP defa+'bejkap.bat'
 #define A_GREX
 #define A_ZAP_DAN
 #define A_DILTH 9
 #define A_LPNUM 3
 #command INIT SCREEN => //__run("font")
-#command INIT PRINTER => qqout(eval(MEMVAR->P_INIT,wasbad))
+#command INIT PRINTER => wwout(eval(MEMVAR->P_INIT,wasbad))
 #define DTOV(dat) tranr(subs(dtos(dat),5),"##.##")
 #define A_SET_DAT GERMAN
 #define A_NOZAP

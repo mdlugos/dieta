@@ -1,9 +1,10 @@
 #include "lan.ch"
-#define A_DILTH 4
 #ifdef __PLATFORM__WINDOWS
   #define A_WIN_PRN .t.
   #define PLWIN
 #endif
+#define A_DILTH 4
+#define A_NORMY
 #define PC852
 #define A_15CPI
 #define A_BACKUP memvar->bejkap
@@ -14,13 +15,13 @@
 #define A_PCL
 #define A_WADO "      Wystawiˆ:                               Zatwierdziˆ:"
 #define PROC_EN memvar->proc_en
-#define A_WO_JAD 3
+#define A_WO_JAD '  3'
 //#define A_WAGI
 #define isPrinter (.t.)
 #define MAG_BIEZ memvar->mag_biez
 #define ZAP_BIEZ memvar->zap_biez
 #define A_ZAP_DAN
-//#define A_GOCZ
+#define A_GOCZ
 #command INIT SCREEN =>
 #command INIT PRINTER => qqout(eval(MEMVAR->p_init,wasbad))
 #define A_DRUKCOMP
@@ -41,3 +42,4 @@
 #define A_NOZAP
 #define A_LPNUM 2
 #define A_DDBF
+#define A_KODY "alergen"

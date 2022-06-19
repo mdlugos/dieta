@@ -82,7 +82,7 @@ memvar menuzest,_snorm
 local m
 private strona:=0
 #ifdef A_WIN_PRN
-oprn:=A_WIN_PRN
+PRIVATE oprn:=A_WIN_PRN
 #command ?  [<explist,...>]         => WOUT( <explist> )
 #command ?? [<explist,...>]         => WWOUT( <explist> )
 #define qout(x) wout(x)
@@ -475,7 +475,7 @@ if "J"$choicef
 #ifdef A_DODATKI
                       IF menu->ile_pos<>0 .and. Round(menu->ile_pos-ipcalc(menu->dieta),1)<>0
                       a+=len(ltrim(str(menu->ile_pos)))+1
-                      ?? rec[j,3]+=if(empty(gramatura+jedn),memoline(nazwa,a:=int(P_COLN/2)-a-1),memoline(nazwa,a:=int(P_COLN/2)-a-10)+gramatura+' '+jedn)+" "+ltrim(str(menu->ile_pos))+"|"
+                      ?? rec[j,3]+=if(empty(gramatura+jedn),memoline(nazwa,a:=int(P_COLN/2)-a-1),memoline(nazwa,a:=int(P_COLN/2)-a-10)+gramatura+' '+jedn)+" "+spec(p_bon)+Spec(p_uon)+ltrim(str(menu->ile_pos))+p_uoff+p_boff+"|"
                       else
 #endif
                       ?? rec[j,3]+=if(empty(gramatura+jedn),memoline(nazwa,a:=int(P_COLN/2)-a-1),memoline(nazwa,a:=int(P_COLN/2)-a-10)+gramatura+' '+jedn)+"|"
@@ -517,29 +517,25 @@ set order to tag osob_kod
 set relation to
 select main
 set order to tag main_rel
-set relation to
+set relation to kod_osoby into osoby
 if dbseek(key)
    if mes <> NIL
       message(1)
    endif
    darr:={}
-   s:=0
+   w:=s:=0
    il:=array(l,1+len(diety))
-//#ifdef A_GREX
+#ifdef A_SUMOS
+   exec aadd(darr,{UpP(LEFT(osoby->STANOWISko,A_SUMOS))+kod_osoby+chr(ascan(diety,dieta)+64)+chr(ascan(grupy,grupa)+64),recno()}) rest while dtos(data)=key
+#else
    exec aadd(darr,{kod_osoby+chr(ascan(diety,dieta)+64)+chr(ascan(grupy,grupa)+64),recno()}) rest while dtos(data)=key
+#endif
    asort(darr,,,{|x,y|x[1]<y[1]})
    txt:=""
    i:=""
    j:=""
-   aeval(darr,{|x,y|if(txt#(txt:=x[1]),++s,),y:=right(x[1],1),if(y$i,(++s,i+=y),),y:=subs(x[1],-2,1),if(y$j,(++s,j+=y),)})
-/*
-#else
-   exec aadd(darr,{kod_osoby+chr(ascan(diety,dieta)+64),recno()}) rest while dtos(data)=key
-   asort(darr,,,{|x,y|x[1]<y[1]})
-   txt:="",i:=""
-   aeval(darr,{|x,y|if(txt#(txt:=x[1]),++s,),y:=right(x[1],1),if(y$i,(++s,i+=y),)})
-#endif
-*/
+   aeval(darr,{|x,y|if(txt#(txt:=x[1]),++s,),y:=right(x[1],1),if(y$i,,(++s,i+=y)),y:=subs(x[1],-2,1),if(y$j,,(++s,j+=y))})
+   altd()
    ?? ccpi(4)
    if s+prow()+5>P_ROWN .and. s+10<P_ROWN
 #ifdef A_WADO
@@ -581,17 +577,33 @@ if dbseek(key)
 //#ifdef A_GREX
        s:=ascan(grupy,grupa)
        txt[j,s+1]+=ile_pos
+#ifdef A_SUMOS
+       if j=1
+         w+=ile_pos
+       endif
+       if i=len(darr) .or. subs(darr[i+1,1],A_SUMOS+1)#kod_osoby+chr(k+64)+chr(s+64)
+#else
        if i=len(darr) .or. darr[i+1,1]#kod_osoby+chr(k+64)+chr(s+64)
-/*#else
-       if i=len(darr) .or. darr[i+1,1]#kod_osoby+chr(k+64)
-#endif*/
-          osoby->(dbseek(main->kod_osoby,.f.))
+#endif
+//          osoby->(dbseek(main->kod_osoby,.f.))
           ? space(if(l<5,5,0))
-//#ifdef A_GREX
+
+#ifdef A_DODATKI
+          ?? ccpi(cpi)+cpad(osoby->nazwisko,27-len(trim(field->opis)),,3)+TRIM(field->opis),dieta+'/'+grupa+':'
+#else
+#ifdef A_SUMOS
+          if i=len(darr) .or. darr[i+1,1]<>LEFT(darr[i,1],A_SUMOS)
+            ?? spec(P_UON)
+            ?? ccpi(cpi)+cpad(osoby->nazwisko,27-3,,3)+str(w,3),dieta+'/'+grupa+':'
+            ?? spec(P_UOFF)
+            w:=0
+          else
+            ?? ccpi(cpi)+cpad(osoby->nazwisko,27,,3),dieta+'/'+grupa+':'
+          endif
+#else
           ?? ccpi(cpi)+cpad(osoby->nazwisko,27,,3),dieta+'/'+grupa+':'
-/*#else
-          ?? ccpi(cpi)+cpad(osoby->nazwisko,29,,3),dieta+':'
-#endif*/
+#endif
+#endif
           aeval(rec,{|x|qqout("|"+tran(x,D_ILPIC)+"   ")})
           ?? ccpi(4)
           afill(rec,0)
@@ -852,18 +864,12 @@ return
 #define A_WO_JAD '  3'
 #endif
 procedure wydruk_JAD(di,gr,kop,wo)
-memvar firma_n,firma_n1
 local a,b,c,d,i,x,p:=.f.
 DEFAULT kop TO 1
 gr:=trim(gr)
 di:=trim(di)
 a:={''}
 b:={''}
-
-
-if !empty(gr)
- private firma_n:=A_KOMU_N
-endif
 x:=getlines(memoread('podpis.txt'))
 
 #ifdef A_WIN_PRN
@@ -900,7 +906,7 @@ endif
    if valtype(a[i])='C'
       ?? a[i]
    endif
-   if valtype(b[i])='C' .and. i>7
+   if valtype(b[i])='C' .and. i>6
       ?? ccpi(4,8)
       ?? spec(chr(13))+space(40)+IF(I>12,+'| ','  ')+b[i]
    endif
@@ -922,14 +928,14 @@ endif
  set console on
 return
 stat proc wydruk_JA(di,gr,oa,wo,kop,go)
-local a:={},b,f,h,i,j,mes,da:=relewy->data,po,txt,x,y,z
+local a:={},b,c,f,h,i,j,mes,da:=relewy->data,po,txt,x,y,z
 
 #command ? => aadd(oa,'')
 #command ? <x> => aadd(oa,<x>)
 #command ?? <x> => oa\[len(oa)\]+=<x>
 #else
 procedure wydruk_JAD(di,gr,kop,wo)
-local a:={},b,f,h,i,j,mes,da:=relewy->data,po,txt,x,y,z
+local a:={},b,c,f,h,i,j,mes,da:=relewy->data,po,txt,x,y,z
 
 if !set(_SET_ALTERNATE)
 #ifdef A_WIN_PRN
@@ -937,17 +943,21 @@ if !set(_SET_ALTERNATE)
 #endif
   set console off
   print()
-#endif
 endif
+#endif
 DEFAULT kop TO 1
+if valtype(wo)<>'N'
+   wo:=if(wo,3,0)
+endif
 IF empty(di) .or. !empty(subs(di,2))
-   wo:=NIL
+   wo-=wo%4
 else
+
 di:=trim(di)
 ENDIF
 #ifdef A_GREX
 IF empty(gr)
-   wo:=NIL
+   wo-=wo%4
 else
 gr:=trim(gr)
 ENDIF
@@ -957,8 +967,7 @@ if !SET(_SET_CONSOLE)
 mes:=message("Prosz© czekaÜ;TRWA WYDRUK")
 endif
 #ifdef A_GOCZ
-?? eval(MEMVAR->p_jadinit,di,gr)
-? memvar->firma_n1
+?? firma_n
 #else
 for kop:=kop to 1 step -1
 ?? padr(firma_n,P_COLN-15) //+"dnia "+dtoc(DatE())
@@ -1018,6 +1027,7 @@ for i:=1 to len(posilki)
     endif
     h:=.t.
 do while data=da .and. posilek=po
+   if wo%4 <> 0
    txt:=''
 #ifdef A_GREX
    j:=relewy->(recno())
@@ -1049,31 +1059,34 @@ do while data=da .and. posilek=po
       endif
    endif
 #endif
+   endif
    if h
      ?
      ?
      ? spec(P_UON+P_BON)+subs(posilki[i],2)
      ?? spec(P_BOFF+P_UOFF)
 #ifdef A_WO_JAD
-     if if(valtype(wo)='N',wo>0,.t.=wo)
-       x:=if(empty(a),0,a[ascan(a,{|x|x[1]=A_WO_JAD}),2])
-       if zapot->(dbseek(dtos(da)+po))
+     if wo>0
+       if wo%4>0 .and. !empty(x:=ascan(a,{|x|x[1]=A_WO_JAD}))
+          x:=a[x,2]
+       endif
+       if wo%4>0 .and. zapot->(dbseek(dtos(da)+po))
          zaw_ar(a,,,dtos(da)+po+di+'/'+gr)
        else
          y:=recno()
          while data=da .and. posilek=po
 #ifdef A_GREX
-           if dind(di+'/'+gr,dieta)
+           if wo%4=0 .or. dind(di+'/'+gr,dieta)
               select sklad
               seek menu->danie
-              exec zawar->(mal(a,sklad->ilosc,.t.)) rest for dind(di+'/'+gr,dieta) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
+              exec zawar->(mal(a,sklad->ilosc,.t.)) rest for (wo%4=0 .or. dind(di+'/'+gr,dieta)) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
               select menu
            endif
 #else
-           if dind(di,dieta)
+           if wo%4=0 .or. dind(di,dieta)
               select sklad
               seek menu->danie
-              exec zawar->(mal(a,sklad->ilosc,.t.)) rest for dind(di,dieta) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
+              exec zawar->(mal(a,sklad->ilosc,.t.)) rest for (wo%4=0 .or. dind(di,dieta)) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
               select menu
            endif
 #endif
@@ -1081,18 +1094,54 @@ do while data=da .and. posilek=po
          enddo
          go y
        endif
-       b:=ascan(a,{|x|x[1]=A_WO_JAD})
-       if b<>0 .and. if(valtype(wo)='N',wo%2>0,.t.=wo)
+
+       if wo%2>0 .and. 0<>(b:=ascan(a,{|x|x[1]=A_WO_JAD}))
           ?? str(a[b,2]-x,5)+' kcal'
+       endif
+       if wo%8>=4
+          b:={}
+
+
+       if wo%4>0 .and. zapot->(dbseek(dtos(da)+po))
+          zaw_ar(b,,,dtos(da)+po+di+'/'+gr)
+       else
+         y:=recno()
+         while data=da .and. posilek=po
+#ifdef A_GREX
+           if wo%4=0 .or. dind(di+'/'+gr,dieta)
+              select sklad
+              seek menu->danie
+              exec zawar->(mal(b,sklad->ilosc,.t.)) rest for (wo%4=0 .or. dind(di+'/'+gr,dieta)) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
+              select menu
+           endif
+#else
+           if wo%4=0 .or. dind(di,dieta)
+              select sklad
+              seek menu->danie
+              exec zawar->(mal(b,sklad->ilosc,.t.)) rest for (wo%4=0 .or. dind(di,dieta)) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
+              select menu
+           endif
+#endif
+           skip
+         enddo
+         go y
+       endif
+
+          c:=''
+          elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+ltrim(str(val(x[1])%100,3)),)}))
+          if !empty(c)
+             ?? spec(ccpi(7)+p_bon),'*'+c
+             ?? spec(p_boff+ccpi(4))
+          endif
        endif
      endif
 #endif
      ?
      h:=.f.
    endif
-               if mes <> NIL
-                  message(1)
-               endif
+   if mes <> NIL
+      message(1)
+   endif
 #ifdef A_GOCZ
   if go=.t.
      ?
@@ -1114,12 +1163,34 @@ do while data=da .and. posilek=po
    ?? if(go=.t.,ccpi(5,4)+cpad(nazwa,30,12,1),nazwa)+' '+gramatura+' '+jedn
    ?? ccpi(4)
 #else
-   ?? nazwa,gramatura,jedn
+#ifdef A_WO_JAD
+       c:=''
+       if wo%16>=8
+          b:={}
+          select sklad
+          seek menu->danie
+          exec zawar->(mal(b,sklad->ilosc,.t.)) rest for dind(di,dieta) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
+          select dania
+          elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+ltrim(str(val(x[1])%100,3)),)}))
+       endif
+       if !empty(c)
+         ?? b:=trim(nazwa)
+         ?? spec(p_bon+ccpi(7))
+         ?? pad(' *'+c,5*(len(nazwa)-len(b))/3)
+         ?? spec(ccpi(4)+p_boff)
+       else
+         ?? nazwa
+       endif
+#else
+     ?? nazwa
+#endif
+
+   ?? '',gramatura,jedn
 #endif
   select menu
 #ifdef A_DODATKI
   if ile_pos<>0
-   ?? str(ile_pos)
+   ?? p_bon+str(ile_pos)+p_boff
   endif
 #endif
   skip
@@ -1127,15 +1198,15 @@ enddo
 next
 #ifdef A_WO_JAD
 //if .t.=wo
-if if(valtype(wo)='N',wo%4>1,.t.=wo)
+if wo%4>=2
 ?
 ? 'WartoòÜ odæywcza:'
 #ifdef A_GOCZ
 IF go=.t.
-aeval(zaw_ar(a),{|x|aadd(oa,ccpi(5,4)+pad(x,P_COLN*.6))})
+aeval(zaw_ar(a,,,di+'/'+gr),{|x|aadd(oa,ccpi(5,4)+pad(x,P_COLN*.6))})
 //aeval(zaw_ar(a),{|x|aadd(oa,cpad(x,P_COLN/2,12,1))})
 ELSE
-aeval(zaw_ar(a),{|x|aadd(oa,x)})
+aeval(zaw_ar(a,,,di+'/'+gr),{|x|aadd(oa,x)})
 ENDIF
 #command ? => qout()
 #command ? [<List,...>] => qout([<List>])
@@ -1146,9 +1217,12 @@ ENDIF
 #command ?? [<explist,...>]         => [WWOUT( <explist> )]
 #endif
 #else
-aeval(zaw_ar(a),{|x|qout(x)})
+aeval(zaw_ar(a,,,di+'/'+gr),{|x|qout(x)})
 #endif
 endif
+
+
+
 #endif
 #ifndef A_GOCZ
 #ifdef A_WADO
@@ -1183,21 +1257,24 @@ return
 ***************
 procedure wydruk_rec
 
-local mes,x
-/*
-local flag
-flag:=1=alarm("Czy podawaÜ zawartoòÜ element¢w w skàadnikach ?",{"TAK","NIE"},1)
-*/
+local mes,x,gr
+
 begin sequence
 set console off
 print()
 mes:=message("Prosz© czekaÜ;TRWA WYDRUK")
 select dania
 ?? spec(eval(p_margin,5))
-?? padr(firmA_n,P_COLN-20)+"dnia "+dtoc(DatE())
+?? padr(firmA_n,P_COLN-20)
+//+"dnia "+dtoc(DatE())
 ?
 ? "Receptura:",nazwa,gramatura,jedn,dieta
 ?
+#ifdef A_ODPADKI
+gr := val(gramatura)
+select zawar
+set order to tag zaw_ele
+#endif
 select surowce
 set order to tag sur_kod
 select sklad
@@ -1206,7 +1283,13 @@ set relation to skladnik into surowce
 seek dania->danie
 do while danie==dania->danie
    message(1)
-   ? surowce->nazwa,ilosc,surowce->jedN
+   ? cpad(surowce->nazwa,46,,3),ilosc,surowce->jedN
+#ifdef A_ODPADKI
+   if gr>0.1
+    zawar->(dbseek(A_ODPADKI+surowce->skladnik,.f.))
+    ?? str(100 * ilosc * (1 - zawar->ilosc/surowce->gram) / gr, 4)+' %'
+   endif
+#endif
    skip
 enddo
 ?
@@ -1216,9 +1299,17 @@ for x:=1 TO mlcount(dania->opis,P_COLN-5)
 next x
 ?
 endif
+x:=zaw_ar({},,dania->danie)
+#ifdef A_MALWA
+  if !empty(x) .and. 2=alarm("Czy drukowaÜ wartoòÜ odæywcz• ?",{"TAK","NIE"},1)
+     x:=NIL
+  endif
+#endif
+if !empty(x)
 ? "WartoòÜ odæywcza:"
 ?
-aeval(zaw_ar({},,dania->danie),{|x|qout(space(9)+x)})
+aeval(x,{|x|qout(space(9)+x)})
+endif
 eject
 end sequence
 message(mes)
@@ -1239,32 +1330,19 @@ set print to
 set console on
 return
 ***************
-procedure koszty(dokl)
-local e,ip,ipw,wp,ipg,wpg,cp,aip,awp,an,aep,wtot,itot,wGR,iGR,egr,i,j,k,l,m,od,do,ak,ag,ad,w,txt,im,ild
+func KoCalc(od,do,osprint)
+local e,aep,aip,awp,anp,i,j,k,l,m,ak,ag,ad,w,txt,im,v
 memvar posilki,grupy,diety,narzuty
-field kod_osoby,posilek,data,ile_pos,grupa,waga
-do:=DatE()-day(DatE())
-od:=do-day(do)+1
-@ 21, 5 say "od" get od picture "@D" valid {||do:=max(od,do),.t.}
-@ 21,20 say "do" get do picture "@D" valid {||if(do<od,(do:=od)=NIL,.t.)}
-read
-if readkey()=27
-    return
-endif
-print()
-setprc(P_ROWN,0)
+field kod_osoby,posilek,data,ile_pos
+
+
 ag:=len(grupy)
 ak:=len(posilki)
 ad:=len(diety)
-wgr:=array(ag,ak,ad)
-#ifdef A_NARZUT
-an:=array(ag)
-afill(an,0)
-#endif
-aeval(wgr,{|y|aeval(y,{|x|afill(x,0)})})
-igr:=aclone(wgr)
-aip:=aclone(igr)
-awp:=aclone(aip)
+aip:=array(ag,ak,ad)
+awp:=array(ag,ak,ad)
+  aeval(aip,{|y|aeval(y,{|x|afill(x,0.0)})})
+  aeval(awp,{|y|aeval(y,{|x|afill(x,0.0)})})
 SELECT MAIN
 #ifdef A_GREX
 SET RELATION to RELEWY->(dseek(,'data,posilek,dieta',MAIN->data,MAIN->posilek,MAIN->dieta+'/'+MAIN->grupa)) into relewy
@@ -1272,6 +1350,7 @@ SET RELATION to RELEWY->(dseek(,'data,posilek,dieta',MAIN->data,MAIN->posilek,MA
 SET RELATION to RELEWY->(dseek(,'data,posilek,dieta',MAIN->data,MAIN->posilek,MAIN->dieta+' ')) into relewy
 #endif
 *****************************
+v:=.f.
 im:=array(ag)
 afill(im,0)
 aep:=array(do-od+1,ak,ag)
@@ -1292,9 +1371,20 @@ do while !eof() .and. DATA<=do
        w:=ile_pos*relewy->(WARTOSC)/relewy->ile_pos
        im[i]+=w
        aep[l,j,i]+=w
+#ifdef A_NARZUT
+       v:=v .or. narzuty[i]<>100
+#endif
     endif
     SKIP
 enddo
+#ifdef A_NARZUT
+if v
+  anp:=array(ag,ak,ad)
+  aeval(anp,{|y|aeval(y,{|x|afill(x,0.0)})})
+else
+  anp:=NIL
+endif
+#endif
 e:=0
 aeval(im,{|x,i|if(x=0,,(x:=Round(e+=x,A_ZAOKR),e-=x,im[i]:=x-im[i]))})
 aeval(aep,{|x|aeval(x,{|x|;
@@ -1310,13 +1400,15 @@ aeval(aep,{|x|aeval(x,{|x|;
    });
 })})
 *********************
-select osoby
-set order to tag osob_kod
 SELECT MAIN
 SET ORDER TO tag main_kod
 go top
+#ifndef A_LAN
+#define filock() .t.
+#endif
+  v:=fieldpos('wartosc')<>0 .and. filock()
 do while !eof()
-  osoby->(dbseek(txt:=main->kod_osoby,.f.))
+  txt:=main->kod_osoby
   seek txt+DTOS(od)
   if eof()
      exit
@@ -1325,7 +1417,14 @@ do while !eof()
      seek txt+"@"
      loop
   endif
-  w:=0
+  im:=w:=0
+  aeval(aip,{|y|aeval(y,{|x|afill(x,0.0)})})
+  aeval(awp,{|y|aeval(y,{|x|afill(x,0.0)})})
+#ifdef A_NARZUT
+  if anp<>NIL
+  aeval(anp,{|y|aeval(y,{|x|afill(x,0.0)})})
+  endif
+#endif
   DO WHILE txt+DTOS(do)>=kod_osoby+DTOS(Data) .and. !eof()
     if relewy->(EOF())
        alarm("Prosz© zaimportowaÜ dane z magazynu æywnoòciowego;brak danych z dnia "+dtoc(data)+" posilek: "+posilek+dieta)
@@ -1346,14 +1445,46 @@ do while !eof()
       aep[l,j,i]+=e
     ***********
       aWP[i,j,k]+=m
+      im+=m
       if aip[i,j,k]=0
          ++w
       endif
       aIP[i,j,k]+=ILE_POS
+
+#ifdef A_NARZUT
+      if anp<>NIL
+      anp[i,j,k]+=Round(Round(m*100,0)*narzuty[i],-2)/10000
+      endif
+#endif
+    else
+      m:=0
+    endif
+    if v
+      MAIN->wartosc:=m
     endif
     SKIP
   ENDDO
-  if prow()+w+2>P_ROWN
+
+  if if(valtype(osprint)='B',eval(osprint,txt,w,aip,awp,anp),osprint==txt)
+     exit
+  endif
+
+  seek txt+"@"
+enddo
+
+UNLOCK
+
+return im
+***************
+stat func osprint(txt,l,od,do,aip,awp,anp,igr,wgr,an,strona)
+  local ip,wp,cp,il,wa,ag,ak,ad,i,j,k
+
+  ip:=wp:=cp:=0
+  ag:=len(aip)
+  ak:=len(aip[1])
+  ad:=len(aip[1,1])
+  osoby->(dbseek( txt, .f. ))
+  if prow()+l+2>P_ROWN
    if strona>0
       specout(ccpi(4)+chr(13)+"")
    endif
@@ -1363,60 +1494,96 @@ do while !eof()
 ? "Koszty æywienia za okres od",od,"do",do,"wà•cznie strona"+str(++strona,3)
 ?
 #ifdef A_NARZUT
+   if anp<>NIL
    specout(ccpi(5)+p_uon)
-? "Nazwisko                    Grupa     Posiàek     Dieta      IloòÜ        Wsad      Narzut"
+? "Nazwisko                    Grupa     Posiàek     Dieta      IloòÜ       Wsad  z Narzutem"
+   else
 #else
+   if .t.
    specout(P_UON)
 ? "Nazwisko                    Grupa     Posiàek     Dieta      IloòÜ       Koszt"
 #endif
+   endif
    specout(P_UOFF)
   endif
   ? pad(osoby->nazwisko, P_COLN-53)
-  l:=ip:=wp:=cp:=0
+
+  l:=0
   for i:=1 to ag;for j:=1 to ak;for k:=1 to ad
       if aip[i,j,k]#0
-/******************
-        if awp[i,j,k]<>0
-           egr[i,j,k]+=awp[i,j,k]-(awp[i,j,k]:=round(awp[i,j,k]+egr[i,j,k]+e,A_ZAOKR))
-           e:=0 //z powodu moæliwoòci bà©du w pierszym przebiegu, dodaÜ to tutaj i wyzerowaÜ
-        endif
-*******************/
-        if l<>0
+        il:=aip[i,j,k]
+        wa:=awp[i,j,k]
+        igr[i,j,k]+=il
+        wgr[i,j,k]+=wa
+        ip+=il
+        wp+=wa
+        if ++l>1
         ? space(P_COLN-53)
         endif
-        ?? cpad(subs(grupy[i],1,10)+" "+subs(posilki[j],3,10)+" "+subs(diety[k],1,10),32,10,1),str(aip[i,j,k],6 D_ILPOZ1),strpic(awp[i,j,k],12,A_ZAOKR,"@E ")
+        ?? cpad(subs(grupy[i],1,10)+" "+subs(posilki[j],3,10)+" "+subs(diety[k],1,10),32,10,1),str(il,6 D_ILPOZ1),strpic(wa,12,A_ZAOKR,"@E ")
 #ifdef A_NARZUT
-        m:=Round(awp[i,j,k]*100,0)*narzuty[i]/100
-        an[i]+=m
-        ?? strpic(m,12,A_ZAOKR,"@EZ ")
-        cp+=m
+        if anp<>NIL
+          ?? strpic(anp[i,j,k],12,A_ZAOKR,"@EZ ")
+          an[i]+=anp[i,j,k]
+          cp+=anp[i,j,k]
+          anp[i,j,k]:=0
+        endif
 #endif
-        ip+=aip[i,j,k]
-        wp+=awp[i,j,k]
-        igr[i,j,k]+=aip[i,j,k]
-        wgr[i,j,k]+=awp[i,j,k]
         aip[i,j,k]:=awp[i,j,k]:=0
-        ++l
       endif
   next;next;next
+
   if l=1
-     ?? spec(chr(13)+space(P_COLN-20)+P_UON+space(20))
+     ?? spec(chr(13)+space(P_COLN-22)+P_UON+space(22))
      ?? spec(P_UOFF)
   else
-     ? space(P_COLN-20)
-     ?? spec(P_BON+P_UON)+str(ip,6 D_ILPOZ1),strpic(wp,12,A_ZAOKR,"@E ")
+     ? space(P_COLN-22)
+     ?? spec(P_BON+P_UON)+str(ip,8 D_ILPOZ1),strpic(wp,12,A_ZAOKR,"@E ")
 #ifdef A_NARZUT
-     ?? strpic(cp,12,A_ZAOKR,"@EZ ")
+     if anp<>NIL
+       ?? strpic(cp,12,A_ZAOKR,"@EZ ")
+     endif
 #endif
      ?? spec(P_BOFF+P_UOFF)
   endif
-  seek txt+"@"
-enddo
-/********
-?
-aeval(im,{|x|qqout(str(x*100,3))})
-aeval(aep,{|x|qout(),aeval(x,{|x|aeval(x,{|x|qqout(str(x*100,3))})})})
-*********/
+return .f.
+***************
+procedure koszty()
+local aip,awp,ip,ipw,wp,ipg,wpg,cp,igr,wgr,an,wtot,itot,i,j,k,l,m,od,do,ak,ag,ad,w,txt,im,ild
+memvar posilki,grupy,diety,narzuty
+field kod_osoby,posilek,data,ile_pos,grupa,waga
+do:=DatE()-day(DatE())
+od:=do-day(do)+1
+@ 21, 5 say "od" get od picture "@D" valid {||do:=max(od,do),.t.}
+@ 21,20 say "do" get do picture "@D" valid {||if(do<od,(do:=od)=NIL,.t.)}
+read
+if readkey()=27
+    return
+endif
+print()
+setprc(P_ROWN,0)
+ag:=len(grupy)
+ak:=len(posilki)
+ad:=len(diety)
+#ifdef A_NARZUT
+  an:=array(ag)
+  afill(an,0)
+#endif
+igr:=array(ag,ak,ad)
+aeval(igr,{|y|aeval(y,{|x|afill(x,0)})})
+wgr:=aclone(igr)
+select osoby
+set order to tag osob_kod
+KoCalc(od,do,{|txt,l,aip,awp,anp|osprint(txt,l,od,do,aip,awp,anp,igr,wgr,an,@strona)})
+
+#ifdef A_NARZUT
+  i:=.f.
+  aeval(an,{|x|i:=i .or. x<>0})
+  if !i
+    an:=NIL
+  endif
+#endif
+
 if strona>0
 if prow()+(ag+3)*ak*ad+5>P_ROWN
    specout(ccpi(4)+chr(13)+"")
@@ -1427,7 +1594,9 @@ if prow()+(ag+3)*ak*ad+5>P_ROWN
 ?
 ? "strona"+str(++strona,3)
 #ifdef A_NARZUT
+  if an<>NIL
    specout(ccpi(5))
+  endif
 #endif
 endif
 select relewy
@@ -1444,13 +1613,18 @@ sel('posilki',,,.t.)
 ?
 ? "                                    iloòÜ     wartoòÜ    cena"
 #ifdef A_NARZUT
+IF an<>NIL
 ?? "    cena z n.  narzut"
+endif
 #endif
 aip:=awp:=0
 wtot:=array(ag,ak)
 aeval(wtot,{|x|afill(x,0)})
 itot:=aclone(wtot)
 for i=1 to ag
+
+
+
    ?
    l:=wp:=ip:=ipw:=wpg:=ipg:=im:=cp:=0
    txt:=''
@@ -1472,6 +1646,27 @@ for i=1 to ag
       for k=1 to ad
          if igr[i,j,k]#0
             ++m
+if prow()+5>P_ROWN
+   specout(ccpi(4)+chr(13)+"")
+   setprc(0,0)
+?? padr(firma_n,P_COLN-15)+"dnia "+dtoc(DatE())
+?
+? "Koszty æywienia za okres od",od,"do",do,"wà•cznie"
+?
+? "strona"+str(++strona,3)
+?
+#ifdef A_NARZUT
+IF an<>NIL
+   specout(ccpi(5))
+endif
+#endif
+? "                                    iloòÜ     wartoòÜ    cena"
+#ifdef A_NARZUT
+  if an<>NIL
+?? "    cena z n.  narzut"
+  endif
+#endif
+endif
             ? subs(grupy[i],3,10),subs(posilki[j],3,10),subs(diety[k],1,10),str(igr[i,j,k],6 D_ILPOZ1),strpic(wgr[i,j,k],12,A_ZAOKR,"@E "),strpic(wgr[i,j,k]/igr[i,j,k],7,A_ZAOKR,"@E ",.t.)
             itot[i,j]+=igr[i,j,k]
             wtot[i,j]+=wgr[i,j,k]
@@ -1505,13 +1700,13 @@ for i=1 to ag
 #ifdef A_WAGI
          ? padl(Trim(subs(grupy[i],1))+" OSOBODNI W/G WAG POSIùKOW:",30),str(ipw,8 D_ILPOZ1),strpic(wp,12,A_ZAOKR,"@E "),strpic(wp/ipw,7,A_ZAOKR,"@E ",.t.)
 #ifdef A_NARZUT
-         cp:=Round(100*wp/ip,0)*narzuty[i]/100
+         cp:=Round(Round(100*wp/ip,0)*narzuty[i],-2)/10000
 #endif
 #else
          ? padl(grupy[i]+' SUMA CEN POSIùK‡W:',30),str(ip,8 D_ILPOZ1),strpic(wp,12,A_ZAOKR,"@E "), strpic(cp,7,A_ZAOKR,"@E ",.t.)
          ? padl("MAKSYMALNA ILOóè DZIENNIE:",30),str(im,8 D_ILPOZ1),strpic(wp,12,A_ZAOKR,"@E "),strpic(wp/im,7,A_ZAOKR,"@E ",.t.)
 #ifdef A_NARZUT
-         cp:=Round(100*cp*narzuty[i],0)/100
+         cp:=Round(100*cp*narzuty[i],-2)/10000
 #endif
 #endif
       endif
@@ -1519,10 +1714,13 @@ for i=1 to ag
       aip+=ip
       awp+=wp
 #ifdef A_NARZUT
+      if an<>NIL
       ?? strpic(cp,7,A_ZAOKR,"@ZE ",.t.)
       ?? strpic(an[i],12,A_ZAOKR,"@ZE ")
+      endif
 #endif
    endif
+
 next i
 #ifdef A_WAGI
 use
@@ -1721,27 +1919,33 @@ goto 0
 select zapot
 set order to tag zap_rel
 
-seek dtos(od)
+seek (b:=dtos(od)+p)
 
 do while !eof() .and. data<=do
-   if posilek#p
-      if posilek>p
-         seek dtos(data)+"~"
-      else
-         seek dtos(data)+p
+   if dtos(data)+posilek=b
+      if !dind(d,dieta)
+         skip
+         loop
       endif
+   elseif b=dtos(data)
+      seek (dtos(data)+'~')
+      seek (b:=dtos(data)+p)
+      loop
+   else
+      seek (b:=dtos(data)+p)
       loop
    endif
-   relewy->(dbseek(dseek(,'data,posilek,dieta',zapot->data,zapot->posilek,d),.f.))
-   if relewy->ile_pos<>0 .and. dind(d,dieta) .and. surowce->(dbseek(zapot->skladnik,.f.))
-      if relewy->data<>data .or. relewy->posilek<>posilek .or. relewy->dieta<>dieta
-        relewy->(dbseek(dseek(,'data,posilek,dieta',zapot->data,zapot->posilek,zapot->dieta),.f.))
-        if data<>da
-           ++dni
-        endif
+   relewy->(dbseek(dseek(,'data,posilek,dieta',zapot->data,zapot->posilek,d+' '),.f.))
+   if relewy->ile_pos<>0
+      if data<>da
+        ++dni
         @ 21,55 Say da:=data
       endif
-      zawar->(mal(atot,zapot->ilosc*surowce->przel/relewy->ile_pos,ign))
+      i:=ipcalc(dieta)
+      if i<>0
+        surowce->(dbseek(zapot->skladnik,.f.))
+        zawar->(mal(atot,zapot->ilosc*surowce->przel/i,ign))
+      endif
    endif
    skip
 enddo
@@ -1749,8 +1953,6 @@ enddo
 if empty(atot)
    return
 endif
-
-
 
 print()
 strona:=1
@@ -1762,6 +1964,7 @@ strona:=1
 if ""#p
    ?? ', posiàek:',subs(posilki[ascan(posilki,p)],3)
 endif
+?? ', dni:',str(dni,3)
 ?
 
 SELECT ELEMENTY
@@ -1776,7 +1979,7 @@ SELECT ELEMENTY
  next i
  for i:=1 to len(PROC_EN)
    b:=PROC_EN[i,3]
-   if (.f.==ign) .or. (dbseek(b,.f.) .and. !field->ignoruj)
+   if (.f.==ign) .or. (dbseek(b,.f.) .and. !ELEMENTY->ignoruj)
      j:=ascan(atot,{|x|x[1]=b})
      if j=0
        aadd(atot,{b,0})
@@ -1787,7 +1990,11 @@ SELECT ELEMENTY
  next i
 #endif
  asort(atot,,,{|x,y|x[1]<y[1]})
- aeval(atot,{|x|dbseek(x[1],.f.),qout(nazwa+' '+str(x[2]/dni,10,3)+' '+jedn),message(100)})
+
+
+ //aeval(atot,{|x|dbseek(x[1],.f.),if(empty(jedn),,qout(nazwa+' '+str(x[2]/dni,10,3)+' '+if(jedn='%','%',jedn))),message(100)})
+ aeval(atot,{|x,y|atot[y,2]/=dni})
+ aeval(zaw_ar(atot,,,d,ign),{|x|qout(x)})
 
 return
 ******************

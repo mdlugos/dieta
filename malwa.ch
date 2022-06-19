@@ -46,3 +46,4 @@
 #define A_DDBF
 #define A_WADO eval(MEMVAR->podpis)
 #define A_BACKUP MEMVAR->backup
+#define A_MALWA

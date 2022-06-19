@@ -2,8 +2,8 @@
 #include "inkey.ch"
 #include "getexit.ch"
 #define WARTOSC bin2d(field->d_wartosc)
-MEMVAR CHANGED,diety,posilki,grupy,mies_rob,posstr
-static poprec,oldrec,keyp,startrec,dan,die
+MEMVAR CHANGED,diety,posilki,grupy,mies_rob,posstr,posgr
+static poprec,oldrec,keyp,startrec,dan,die,pg
 #ifdef A_DODATKI
 static ilp
 #endif
@@ -61,6 +61,7 @@ begin sequence
     endif
 else
     lock
+
     FORM_EDIT({14-A_DILTH,76,3,1,999,;
 {|f|MDOK1(f)},;
 {|f,g|mdok2(g)},;
@@ -104,7 +105,14 @@ return
 static proc showh(da,kon)
   @ 2,10 say ile_pos picture D_ILPIC color _sbkgr
   @ 2,17 say strpic(WARTOSC/ile_pos,7,A_ZAOKR,"@E ",.t.) color _sbkgr
+  @ 2,49 say subs(posilki[max(1,ascan(posilki,kon))],3,11) COLOR _sbkgr
   @ 2,60 say if(zapot->(dbseek(dtos(da)+kon,.f.)),"jest","brak") color _sbkgr
+
+#ifdef A_WAGI
+  pg:=subs(PosGr,at(kon,PosStr),1)
+#else
+  pg:=kon
+#endif
 return
 ********
 static proc mdok2(getlist)
@@ -118,8 +126,8 @@ static proc mdok2(getlist)
      kon:=posilek
   endif
   showh(da,kon)
-  @ 2,35 get da valid {||setpos(2,60),devout(if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),.t.}
-  @ 2,47 get kon valid {||setpos(2,60),devout(if(zapot->(dbseek(dtos(da)+KON,.f.)),"jest","brak"),_sbkgr),aczojs(posilki)}
+  @ 2,35 get da valid {||showh(da,kon),.t.}
+  @ 2,47 get kon valid {|y|y:=aczojs(posilki),showh(da,kon),y}
   __setproc(procname(0))
 
 return
@@ -147,9 +155,9 @@ static proc mDOK4(_f,getlist,deep)
 #ifdef A_DODATKI
     ilp:=ile_pos
 #endif
-    if dania->posilek#posilek
+    if !deep .and. dania->posilek#pg
       lock in dania
-      DANIA->posilek:=posilek
+      DANIA->posilek:=pg
       unlock in dania
     endif
     if oldrec#0
@@ -181,7 +189,7 @@ static proc mDOK4(_f,getlist,deep)
   @ _fk, 69-A_DILTH GET DIE PICTURE "@KS"+LTRIM(STR(A_DILTH)) VALID {|g|if(g:changed.and.fpstart=0,fpstart:=2,),dival(g).and.showgram(_f)}
 #ifdef A_DODATKI
   //SAYL chr(9)
-  @ _fk, 70 GET ilp PICTURE D_ILPIC VALID showgram(_f) SEND block:={|x|if(!empty(x),ilp:=if(round(x-ipcalc(die),1)<>0,x,0),if(ilp=0,ipcalc(die),ilp))}
+  @ _fk, 70 GET ilp PICTURE D_ILPIC VALID showgram(_f) SEND block:={|x|if(x<>NIL,ilp:=if(round(x-ipcalc(die),1)<>0,x,0),if(ilp=0,ipcalc(die),ilp))}
 #endif
   //SAYL chr(3)
   __setproc(procname(0))
@@ -263,9 +271,9 @@ local r:=dania->(recno())
 #ifdef A_DODATKI
       ilp:=ile_pos
 #endif
-    if dania->posilek#posilek
+    if dania->posilek#pg
       lock in dania
-      DANIA->posilek:=posilek
+      DANIA->posilek:=pg
       unlock in dania
     endif
     showgram(_f)
@@ -340,9 +348,9 @@ local totrec
 #ifdef A_DODATKI
     ile_pos:=ilp
 #endif
-    if dania->posilek#posilek
+    if dania->posilek#pg
       lock in dania
-      DANIA->posilek:=posilek
+      DANIA->posilek:=pg
       unlock in dania
     endif
 
@@ -359,12 +367,62 @@ static function showgram(_f)
 SAYL dania->jedn color _sbkgr
 #ifdef A_DODATKI
 if ilp=0
+   @ _fk, 75 SAY ' ' color _sbkgr
    return .t.
 endif
-#endif
 @ _fk, 75 SAY 'þ' color _sbkgr
+#else
+  @ _fk, 70 SAY ipcalc(die) PICTURE D_ILPIC COLOR _sbkgr
+#endif
 
 return .t.
+***************************************
+func dand(d,di,da,po)
+local a,b,c,i,j,k
+  d:=trim(d)
+  di:=trim(di)
+  if empty(da) .or. empty(po)
+#ifdef A_GREX
+    i:=at('/',d)
+    j:=at('/',di)
+    if i<=2 .and. len(d)<=i+1
+     return dind(d,di)
+    elseif j<=2 .and. len(di)<=j+1
+     return dind(di,d)
+    endif
+    b:=len(diety)
+    a:=array(b*len(grupy))
+    c:=ascan(a,{|x,y|x:=len(diety),x:=left(diety[(y-1)%b+1],1)+'/'+left(grupy[int((y-1)/b)+1],1),dind(x,d).and.dind(x,di)})<>0
+  else
+    b:={select(),RELEWY->(recno())}
+    select RELEWY
+    set order to 1
+    set filter to
+    set relation to
+    dbseek(dseek(,'data,posilek,dieta',da,po,'0'))
+    c:=.f.
+    dbeval({||c:=.t.},{||ile_pos<>0 .and. dieta>='0' .and. subs(dieta,2,1)='/' .and. subs(dieta,3,1)>='0' .and. empty(subs(dieta,4)) .and. dind(dieta,d) .and. dind(dieta,di)},{||!c .and. data=da .and. posilek=po})
+#else
+    if len(d)<=1
+     return dind(d,di)
+    elseif len(di)<=1
+     return dind(di,d)
+    endif
+    c:=ascan(diety,{|x|x:=left(x,1),dind(x,d).and.dind(x,di)})<>0
+  else
+    b:={select(),RELEWY->(recno())}
+    select RELEWY
+    set order to 1
+    set filter to
+    set relation to
+    dbseek(dseek(,'data,posilek,dieta',da,po,'0'))
+    c:=.f.
+    dbeval({||c:=.t.},{||ile_pos<>0 .and. dieta>='0' .and. empty(subs(dieta,2)) .and. dind(dieta,d) .and. dind(dieta,di)},{||!c .and. data=da .and. posilek=po})
+#endif
+    dbgoto(b[2])
+    dbselectarea(b[1])
+  endif
+return c
 ***************************************
 func dind(d,di)
 #ifdef A_GREX
@@ -504,12 +562,18 @@ LOCAL DAC,ZNALAZ,recme,recr,recd
   select dania
  set order to tag dan_naz
  recd:=recno()
- ZNALAZ:=dbseek(dseek(,'posilek,nazwa',relewy->posilek,dan))
+ ZNALAZ:=dbseek(dseek(,'posilek,nazwa',pg,dan))
+ if ordnumber('dan_uni')>0
+    set order to tag dan_uni
+    dbseek(dseek(,'posilek,nazwa','',dan))
+    set order to tag dan_naz
+ endif
+
  IF !ZNALAZ
     dbgoto(recd)
-    ZNALAZ:=szukam({0,min(maxcol()-60,col()),maxrow(),,1,len(relewy->posilek+trim(dan)),;
+    ZNALAZ:=szukam({0,min(maxcol()-60,col()),maxrow(),,1,len(trim(dan))+1,;
      'Danie',{||posilek+"/"+left(nazwa,40)+if(""=opis,if(sklad->(dbseek(dania->danie)),"³","|"),"&")+left(dieta,A_DILTH)+"³"+gramatura+" "+jedn},;
-    {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',relewy->posilek,dan))})
+    {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',pg,dan))})
  ENDIF
     SET ORDER TO tag dan_kod
     SET RELATION TO
@@ -557,9 +621,9 @@ local o
 DO CASE
   CASE _skey=0 .and. alias()="DANIA"
     _spform:={|p|tranr(p,"X/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")}
-    if PosStr $ INDEXKEY(0)
+    if [at(] $ lower(INDEXKEY(0))
        _sp2s:={|x|dseek(,'posilek,nazwa',left(x,1),subs(x,2))}
-       _ss2p:={|x|if(len(x)>0,subs(posstr,val(left(x,1)),1)+subs(x,2),"")}
+       _ss2p:={|x|if(len(x)>0,subs(posstr,asc(x)%16,1)+subs(x,2),"")}
        _spform:={|p,l|tranr(eval(_ss2p,p,l),"X/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")}
     endif
     if _slth>0
@@ -591,6 +655,42 @@ DO CASE
    case _skey=27
         _sret:=.f.
         return .t.
+
+
+   CASE _skey=2 .AND. _sbeg=1 // ^>
+    if empty(ordnumber('dan_uni'))
+       return .f.
+    endif
+
+    go _srec[_sm]
+    SET ORDER TO tag dan_uni
+    _sbeg:=3
+    _swar:=&('{|p|'+IndexkeY(0)+'=p'+'}')
+    _spocz:=subs(_spocz,2)
+    _slth:=len(_spocz)
+    _spform:={|p|p}
+    _sp2s:=NIL
+    _ss2p:={|x|x}
+    refresh(1,_s)
+
+   CASE _skey=26 .AND. _sbeg#1 // ^<
+    if empty(ordnumber('dan_uni'))
+       return .f.
+    endif
+
+    go _srec[_sm]
+    SET ORDER TO tag dan_naz
+    _slth+=1
+    _sbeg:=1
+    _spocz:=dseek(,'nazwa',_spocz)
+    _swar:=&('{|p|'+IndexkeY(0)+'=p'+'}')
+    _spform:={|p|tranr(p,"X/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")}
+    if [at(] $ lower(INDEXKEY(0))
+       _sp2s:={|x|dseek(,'posilek,nazwa',left(x,1),subs(x,2))}
+       _ss2p:={|x|if(len(x)>0,subs(posstr,asc(x)%16,1)+subs(x,2),"")}
+       _spform:={|p,l|tranr(eval(_ss2p,p,l),"X/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")}
+    endif
+    refresh(1,_s)
 
    case _skey=43
       _slth=_slth-1

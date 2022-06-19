@@ -2,10 +2,11 @@
 #define A_WAGI
 #define A_DDBF
 #define PC852
+#define PLWIN
 #define A_CDX DBFCDX
 #define A_GREX
 #define A_POLOWA
-#define A_ELZ
+//#define A_ELZ
 #define UpP(x) UPPER(x)
 #command INIT SCREEN => //run('uniznak.exe r')
 #command INIT PRINTER => qqout(eval(memvar->p_init,wasbad))
@@ -14,9 +15,14 @@
 #define A_WO_JAD memvar->energia
 #define A_ZAP_DAN
 #define A_XPRN
+#define A_WIN_PRN .t.
+#define A_PRINT(x) eval(MEMVAR->do_print,x)
+#define A_GETLPT eval(MEMVAR->do_getlpt)
+#define A_STOPKA 'Program: System Dieta, '+wersja()+', producent: Firma Usˆug Informatycznych Marek Dˆugosz, 43-400 Cieszyn, ul. R¢wna 16'
 #define A_STYLUS
+#define A_15CPI
 #define A_DILTH 9
-//#define A_PCL
+#define A_PCL
 #define isPrinter() .t.
 #define DTOV(dat) tranr(subs(dtos(dat),5),"##.##")
 #define A_SET_DAT GERMAN

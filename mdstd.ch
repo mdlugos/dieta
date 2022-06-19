@@ -2,11 +2,11 @@
         #define mkdir(x) makedir(x)
         #command SET RDD DEFAULT [TO] <x> => REQUEST <x>;rddsetdefault(<"x">)
 #else
-#define MSHOW() sysint(51,1)
-#define MHIDE() sysint(51,2)
-#ifndef _SET_DEFINED
-#include "Set.ch"
-#endif
+ #define MSHOW() sysint(51,1)
+ #define MHIDE() sysint(51,2)
+ #ifndef _SET_DEFINED
+  #include "Set.ch"
+ #endif
 #command DO WHILE <exp> => while <exp>
 #command END <x> => end
 #command NEXT <v> [TO <x>] [STEP <s>] => next
@@ -228,21 +228,20 @@
 
 #ifdef __PLATFORM__UNIX
 #define HB_OsPathSeparator() "/"
+#define HB_ps() "/"
 #define HB_OsPathListSeparator() ":"
 #define HB_OsDriveSeparator() ""
 #define HB_EOL() chr(10)
 #else
 #define HB_OsPathSeparator() "\"
+#define HB_ps() "\"
 #define HB_OsPathListSeparator() ";"
 #define HB_OsDriveSeparator() ":"
 #define HB_EOL() chr(13)+chr(10)
 #endif
 
 #ifdef SIMPLE
-#command ?  [ <xList,...> ] => ( OutErr( HB_EOL() ) [, OutErr( <xList> ) ] )
-#command ?? [ <xList,...> ] => OutErr( <xList> )
-#command ACCEPT TO <idVar> => <idVar> := StrTran( FReadStr( 0, 256 ), HB_EOL() )
-#command ACCEPT <cPrompt> TO <idVar> => ? <cPrompt> ; ACCEPT TO <idVar>
+ #include "simpleio.ch"
 #endif
 
 #command READ [POSITION <pos>] SAVE => __SetProc(0) ; ReadModal(GetList[,<pos>])
@@ -265,7 +264,13 @@
 #command NUSE <(db)> [VIA <rdd>] [ALIAS <a>] [<new: NEW>] [<ex: EXCLUSIVE>] [<sh: SHARED>] [<ro: READONLY>] [INDEX <(index1)> [, <(indexn)>]] ;
          => NetusE( <.new.>, <rdd>, <(db)>, <(a)>,if(<.sh.> .or. <.ex.>, !<.ex.>, NIL), <.ro.> ) [; ordlistadd( <(index1)> )] [; ordlistadd( <(indexn)> )]
 #else
+#ifdef A_SX
+#command NUSE <(db)> [VIA <rdd>] [ALIAS <a>] [<new: NEW>] [<ex: EXCLUSIVE>] [<sh: SHARED>] [<ro: READONLY>] [INDEX <(index1)> [, <(indexn)>]] ;
+         => dbusearea( <.new.>, <rdd>, <(db)>, <(a)>,if(<.sh.> .or. <.ex.>, !<.ex.>, NIL), <.ro.> );if DBINFO(132);DBINFO(131,A_SX);ENDIF [; ordlistadd( <(index1)> )] [; ordlistadd( <(indexn)> )]
+#define NetusE(a,b,c,d,e,f) (dbusearea(a,b,c,d,e,f),if(DBINFO(132),DBINFO(131,A_SX),))
+#else
 #command NUSE <(db)> [VIA <rdd>] [ALIAS <a>] [<new: NEW>] [<ex: EXCLUSIVE>] [<sh: SHARED>] [<ro: READONLY>] [INDEX <(index1)> [, <(indexn)>]] ;
          => dbUseArea( <.new.>, <rdd>, <(db)>, <(a)>,if(<.sh.> .or. <.ex.>, !<.ex.>, NIL), <.ro.> ) [; ordlistadd( <(index1)> )] [; ordlistadd( <(indexn)> )]
 #define NetusE(a,b,c,d,e,f) dbusearea(a,b,c,d,e,f)
+#endif
 #endif

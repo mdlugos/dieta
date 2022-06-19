@@ -1,7 +1,10 @@
 #include "lan.ch"
 #define A_DDBF
 #define A_LPNUM 2
-#define A_DILTH 4
+#define A_DILTH 9
+#define A_GREX
+#define PROC_EN  memvar->proc_en
+#define A_WO_JAD memvar->energia
 #define UpP(x) UPPER(x)
 #command INITIALIZE SCREEN => //__run("font852.com")
 #command INIT PRINTER => specout(eval(memvar->p_init,wasbad))

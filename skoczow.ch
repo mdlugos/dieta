@@ -3,6 +3,15 @@
 #command INIT PRINTER => qqout(eval(MEMVAR->p_init,wasbad))
 #define UpP(x) UPPER(x)
 #define A_XPRN
+#define A_NORMY
+#define PC852
+#define PLWIN
+#define PROC_EN memvar->proc_en
+#define A_WO_JAD '  3'
+#define A_DILTH 9
+#define A_ZAP_DAN
+#define A_CDX DBFCDX
+#define A_GREX
 #define A_DRUKCOMP
 #define A_STYLUS
 #define A_15CPI

@@ -1,15 +1,19 @@
 #include "lan.ch"
+#ifdef __PLATFORM__WINDOWS
+  #define PLWIN
+  //#define A_WIN_PRN .t.
+  #define A_STOPKA 'Program: System Dieta, '+wersja()+', producent: Firma Usˆug Informatycznych Marek Dˆugosz, 43-400 Cieszyn, ul. R¢wna 16'
+#endif
 #define PC852
 #define A_DILTH 4
-//#define PLWIN
-//#define A_ADS 1
+#define A_ODPADKI memvar->a_odpadki
 #define A_DRUKCOMP
 #define A_DDBF
 #define UpP(x) UPPER(x)
 #command INITIALIZE SCREEN => //__run("maz")
 #command INIT PRINTER => qqout(eval(memvar->p_init,wasbad))
 #define A_XPRN
-//#define isPrinter .t.
+#define isPrinter .t.
 #define A_WAGI
 #define DTOV(dat) left(dtoc(dat),5)
 #define A_SET_DAT GERMAN
@@ -29,3 +33,4 @@
 #define A_WADO eval(memvar->podpis)
 #define ZAP_BIEZ MEMVAR->zap_biez
 #define A_MAGSORT
+#define A_BACKUP memvar->bejkap
