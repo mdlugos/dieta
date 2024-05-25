@@ -552,7 +552,7 @@ static function danval(_f,getlist)
 
 field danie,posilek,DATA,nazwa,gramatura,jedn,dieta
 
-LOCAL DAC,ZNALAZ,recme,recr,recd
+LOCAL DAC,ZNALAZ,recme,recr,recd,_s
   dan:=pad(dan,len(dania->nazwa))
   if empty(dan) .or. dan=dania->nazwa
      return .t.
@@ -563,17 +563,24 @@ LOCAL DAC,ZNALAZ,recme,recr,recd
  set order to tag dan_naz
  recd:=recno()
  ZNALAZ:=dbseek(dseek(,'posilek,nazwa',pg,dan))
- if ordnumber('dan_uni')>0
-    set order to tag dan_uni
-    dbseek(dseek(,'posilek,nazwa','',dan))
-    set order to tag dan_naz
- endif
 
- IF !ZNALAZ
-    dbgoto(recd)
-    ZNALAZ:=szukam({0,min(maxcol()-60,col()),maxrow(),,1,len(trim(dan))+1,;
-     'Danie',{||posilek+"/"+left(nazwa,40)+if(""=opis,if(sklad->(dbseek(dania->danie)),"³","|"),"&")+left(dieta,A_DILTH)+"³"+gramatura+" "+jedn},;
-    {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',pg,dan))})
+ if !ZNALAZ
+    _s:={0,min(maxcol()-60,col()),maxrow(),,1,len(trim(dan))+1,;
+         'Danie',{||posilek+"/"+left(nazwa,40)+if(""=opis,if(sklad->(dbseek(dania->danie)),"³","|"),"&")+left(dieta,A_DILTH)+"³"+gramatura+" "+jedn},;
+         {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',pg,dan))}
+    if ordnumber('dan_uni')>0 .and. UpP(nazwa)<>UpP(trim(dan))
+       set order to tag dan_uni
+       if dbseek(UpP(trim(dan)))
+         _slth:=0
+         _spocz:=''
+       else
+         dbgoto(recd)
+       endif
+       set order to tag dan_naz
+    else
+       dbgoto(recd)
+    endif
+    ZNALAZ:=szukam(_s)
  ENDIF
     SET ORDER TO tag dan_kod
     SET RELATION TO
@@ -597,10 +604,10 @@ LOCAL DAC,ZNALAZ,recme,recr,recd
        getlist[2]:display()
     endif
     updated(.t.)
-RETURN .T.
+    RETURN .T.
    ELSE
-dania->(dbgoto(recd))
-ENDIF
+    dania->(dbgoto(recd))
+  ENDIF
 RETURN .F.
 ******************
 func dan_kat(upden)

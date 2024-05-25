@@ -982,7 +982,9 @@ endif
 ?? spec(P_BOFF)
 ?
 if !empty(di)
-#ifdef A_GOCZ
+
+#if 1
+//def A_GOCZ
 if di>='0' .and. empty(subs(di,2))
   txt:=dietylong[ascan(diety,left(di,1))]
   ? memoline(txt,35,1,,.t.)
@@ -1061,7 +1063,7 @@ do while data=da .and. posilek=po
 #endif
    endif
    if h
-     ?
+     ?? spec(p_7lpi)
      ?
      ? spec(P_UON+P_BON)+subs(posilki[i],2)
      ?? spec(P_BOFF+P_UOFF)
@@ -1071,7 +1073,7 @@ do while data=da .and. posilek=po
           x:=a[x,2]
        endif
        if wo%4>0 .and. zapot->(dbseek(dtos(da)+po))
-         zaw_ar(a,,,dtos(da)+po+di+'/'+gr)
+         zaw_ar(a,,,dtos(da)+po+di+'/'+gr,.t.)
        else
          y:=recno()
          while data=da .and. posilek=po
@@ -1103,7 +1105,7 @@ do while data=da .and. posilek=po
 
 
        if wo%4>0 .and. zapot->(dbseek(dtos(da)+po))
-          zaw_ar(b,,,dtos(da)+po+di+'/'+gr)
+          zaw_ar(b,,,dtos(da)+po+di+'/'+gr,.t.)
        else
          y:=recno()
          while data=da .and. posilek=po
@@ -1128,31 +1130,33 @@ do while data=da .and. posilek=po
        endif
 
           c:=''
-          elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+ltrim(str(val(x[1])%100,3)),)}))
+          //elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+ltrim(str(val(x[1])%100,3)),)}))
+          elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+trim(subs(nazwa,3)),)}))
           if !empty(c)
-             ?? spec(ccpi(7)+p_bon),'*'+c
-             ?? spec(p_boff+ccpi(4))
+             ?? spec(ccpi(8)+p_supon+p_bon),'*'+c
+             ?? spec(p_boff+p_supoff+ccpi(4))
           endif
        endif
      endif
 #endif
+     ?
      ?
      h:=.f.
    endif
    if mes <> NIL
       message(1)
    endif
+   ?? spec(p_7lpi)
 #ifdef A_GOCZ
   if go=.t.
-     ?
   else
 #endif
   if di>='0' .and. empty(subs(di,2))
-     ? space(12)
+     ?? space(12)
   elseif len(trim(dieta))#1
-     ? padr(dieta,12)
+     ?? padr(dieta,12)
   else
-     ? subs(diety[ascan(diety,trim(dieta))],1,11)+" "
+     ?? subs(diety[ascan(diety,trim(dieta))],1,11)+" "
   endif
 #ifdef A_GOCZ
   endif
@@ -1163,6 +1167,12 @@ do while data=da .and. posilek=po
    ?? if(go=.t.,ccpi(5,4)+cpad(nazwa,30,12,1),nazwa)+' '+gramatura+' '+jedn
    ?? ccpi(4)
 #else
+   ?? nazwa,gramatura,jedn
+#ifdef A_DODATKI
+  if menu->ile_pos<>0
+   ?? spec(p_bon)+str(menu->ile_pos)+spec(p_boff)
+  endif
+#endif
 #ifdef A_WO_JAD
        c:=''
        if wo%16>=8
@@ -1171,42 +1181,39 @@ do while data=da .and. posilek=po
           seek menu->danie
           exec zawar->(mal(b,sklad->ilosc,.t.)) rest for dind(di,dieta) .and. surowce->(dbseek(sklad->skladnik)) while danie==menu->danie
           select dania
-          elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+ltrim(str(val(x[1])%100,3)),)}))
-       endif
-       if !empty(c)
-         ?? b:=trim(nazwa)
-         ?? spec(p_bon+ccpi(7))
-         ?? pad(' *'+c,5*(len(nazwa)-len(b))/3)
-         ?? spec(ccpi(4)+p_boff)
-       else
-         ?? nazwa
-       endif
-#else
-     ?? nazwa
-#endif
+          //elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+ltrim(str(val(x[1])%100,3)),)}))
+          elementy->(aeval(b,{|x|dbseek(x[1],.f.),if(nazwa='*',c+=' '+trim(subs(nazwa,3)),)}))
 
-   ?? '',gramatura,jedn
+       endif
+       ?? spec(p_12lpi)
+       c:=left(opis,at(')',opis))+if(empty(c),'','   *'+c)
+       if !empty(c)
+         ?? spec(ccpi(8)+p_supon+p_bon)
+         ? padl(c,100)
+         ?? spec(p_boff+p_supoff+ccpi(4)+p_7lpi)
+       else
+         ?
+         ?? spec(p_7lpi)
+       endif
 #endif
+#endif
+  ?
   select menu
-#ifdef A_DODATKI
-  if ile_pos<>0
-   ?? p_bon+str(ile_pos)+p_boff
-  endif
-#endif
   skip
 enddo
+?? spec(p_7lpi)
 next
 #ifdef A_WO_JAD
 //if .t.=wo
 if wo%4>=2
-?
+? spec(p_7lpi)
 ? 'Warto˜† od¾ywcza:'
 #ifdef A_GOCZ
 IF go=.t.
-aeval(zaw_ar(a,,,di+'/'+gr),{|x|aadd(oa,ccpi(5,4)+pad(x,P_COLN*.6))})
+aeval(zaw_ar(a,,,di+'/'+gr,.t.),{|x|aadd(oa,ccpi(5,4)+pad(x,P_COLN*.6))})
 //aeval(zaw_ar(a),{|x|aadd(oa,cpad(x,P_COLN/2,12,1))})
 ELSE
-aeval(zaw_ar(a,,,di+'/'+gr),{|x|aadd(oa,x)})
+aeval(zaw_ar(a,,,di+'/'+gr,.t.),{|x|aadd(oa,x)})
 ENDIF
 #command ? => qout()
 #command ? [<List,...>] => qout([<List>])
@@ -1217,7 +1224,7 @@ ENDIF
 #command ?? [<explist,...>]         => [WWOUT( <explist> )]
 #endif
 #else
-aeval(zaw_ar(a,,,di+'/'+gr),{|x|qout(x)})
+aeval(zaw_ar(a,,,di+'/'+gr,.t.),{|x|qout(x)})
 #endif
 endif
 
@@ -1299,7 +1306,7 @@ for x:=1 TO mlcount(dania->opis,P_COLN-5)
 next x
 ?
 endif
-x:=zaw_ar({},,dania->danie)
+x:=zaw_ar({},,dania->danie,,.t.)
 #ifdef A_MALWA
   if !empty(x) .and. 2=alarm("Czy drukowa† warto˜† od¾ywcz¥ ?",{"TAK","NIE"},1)
      x:=NIL

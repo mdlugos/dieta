@@ -8,6 +8,9 @@
 #define A_MYSZ
 //#define A_WAGI
 #define PROC_EN memvar->proc_en
+#define A_KODY "Kod"
+#define A_NORMY
+#define A_JMALT
 #define A_WO_JAD '  3'
 #define A_ZAP_DAN
 #define A_POLOWA

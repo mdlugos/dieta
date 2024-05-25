@@ -4,11 +4,13 @@
 #ifdef __HARBOUR__
 #include "hbgtinfo.ch"
 #endif
+
 ANNOUNCE GETSYS
 
 #define K_UNDO          K_CTRL_U
-
 #define CTRL_END_SPECIAL
+
+
 // state variables for active READ
 static Updated
 #ifdef A_MYSZ
@@ -41,7 +43,6 @@ static aGetList:={}
 #define GSV_EDITBLOCK   10
 #define GSV_GETLIST     11
 #define GSV_COUNT       11
-
 
 
 
@@ -1026,6 +1027,10 @@ local oldPos := LastPos
   end
 return ( OldPos )
 
+#ifdef __HARBOUR__
+PROCEDURE __SetFormat( bFormat )
+  RETURN
+#endif
 
 /***
 *  Updated()
@@ -1259,9 +1264,9 @@ static proc getchr(get,expandable)
      txt:=get:untransform()
      prevlen:=len(txt)
   endif
-  k:=mlcount(txt,maxcol()-2,8,.t.)
+  k:=mlcount(txt,maxcol()-2,2,.t.)
   for n:=1 to k
-    m:=max(m,len(TRIM(memoline(txt,maxcol()-2,n,8,.t.))))
+    m:=max(m,len(TRIM(memoline(txt,maxcol()-2,n,2,.t.))))
   next
 
   k:=MAX(k,6)
@@ -1331,9 +1336,12 @@ osk:=HB_SETKEYSAVE()
   //RESET KEY K_ALT_E
   RESET KEY GE_WRITE
 
+  if "utf-8"$lower(left(txt,80))
+      txt:=hb_translate(txt,'UTF8',)
+  endif
   do while .t.
     //txt=MEMOEDIT(txt,r1+1,c1+1,r2-1,c2-1,.T.,"gufunc",c2-c1-3,8,l,c,cl,cc)
-    txt=MEMOEDIT(txt,r1+1,c1+1,r2-1,c2-1,.T.,"gufunc",ll,8,l,c,cl,cc)
+    txt=MEMOEDIT(txt,r1+1,c1+1,r2-1,c2-1,.T.,"gufunc",ll,2,l,c,cl,cc)
     k:=lastkey()
     if k=K_CTRL_K
        m:=message("PODAJ  (B,M,K,E,R,W);ROZKAZ:;... ")
@@ -1349,12 +1357,19 @@ osk:=HB_SETKEYSAVE()
            n:=defa+n
           endif
           txt:=memoread(n)
+          if "utf-8"$lower(left(txt,80))
+            txt:=hb_translate(txt,'UTF8',)
+          endif
          else
-          MEMOWRIT(n,strtran(txt,chr(141)+chr(10)))
+          k:=strtran(txt,chr(141)+chr(10))
+          if "utf-8"$lower(left(k,80))
+            k:=hb_translate(k,,'UTF8')
+          endif
+          HB_MEMOWRIT(n,k,.f.)
          endif
        elseif k$"BX"
         bp:=3-bp
-        b[bp]:=mlctopos(txt,ll,l,c,8,ww)
+        b[bp]:=mlctopos(txt,ll,l,c,2,ww)
         if ch
            ch:=.f.
            b[3-bp]:=b[bp]
@@ -1368,7 +1383,7 @@ osk:=HB_SETKEYSAVE()
 #ifdef __HARBOUR__
         bl:= hb_gtInfo( HB_GTI_CLIPBOARDDATA )
 #endif
-        txt:=stuff(txt,k:=mlctopos(txt,ll,l,c,8,ww),0,bl)
+        txt:=stuff(txt,k:=mlctopos(txt,ll,l,c,2,ww),0,bl)
         n:=len(bl)
         if b[1]>k
            b[1]+=n
@@ -1392,7 +1407,7 @@ osk:=HB_SETKEYSAVE()
 #ifdef __HARBOUR__
            hb_gtInfo( HB_GTI_CLIPBOARDDATA, bl )
 #endif
-           txt:=stuff(txt,k:=mlctopos(txt,ll,l,c,8,ww),0,bl)
+           txt:=stuff(txt,k:=mlctopos(txt,ll,l,c,2,ww),0,bl)
            n:=len(bl)
            if b[1]>k
               b[1]+=n
@@ -1434,15 +1449,18 @@ osk:=HB_SETKEYSAVE()
   aeval(osk,{|x|setkey(x[1],x[2])})
 #endif
   if k=GE_WRITE
-        txt:=strtran(txt,chr(141)+chr(10))
+        k:=strtran(txt,chr(141)+chr(10))
+        if "utf-8"$lower(left(txt,80))
+          k:=hb_translate(k,,'UTF8')
+        endif
         if expandable
-           txt:=trim(txt)
+           k:=trim(k)
            m:=val(subs(get:picture,1+at("S",get:picture)))
-           if len(txt)<m
-              txt:=padr(txt,m)
+           if len(k)<m
+              k:=padr(k,m)
            endif
         endif
-        fixbuff(get,txt)
+        fixbuff(get,k)
   endif
 
     RESTSCREEN(r1,c1,r2,c2,sc)

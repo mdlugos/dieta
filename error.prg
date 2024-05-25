@@ -46,7 +46,7 @@ public _sbnorm,_sbkgr,_sramka,_sel,_snorm,_slinia,_sunsel,defa,firma_n:=f,firma_
   REQUEST HB_LANG_PL
   HB_LANGSELECT('PL')
 
-  REQUEST HB_CODEPAGE_PL852
+  REQUEST HB_CODEPAGE_PL852M
   #ifdef PLWIN
    REQUEST HB_CODEPAGE_PLWIN
    request hb_translate
@@ -60,11 +60,12 @@ public _sbnorm,_sbkgr,_sramka,_sel,_snorm,_slinia,_sunsel,defa,firma_n:=f,firma_
    hb_gtInfo( HB_GTI_CLOSEMODE, 1) //Generates HB_K_CLOSE keyboard event (does not close application)
 
     #ifdef PC852
-     HB_CDPSELECT('PL852')
+     HB_CDPSELECT(PC852)
     #else
      HB_CDPSELECT('PLWIN')
     #endif
-
+  #else
+     HB_CDPSELECT(PC852)
   #endif
    //SET(_SET_DEBUG, .t.)
 #ifdef A_ADS
@@ -133,12 +134,23 @@ public pcl:=.f.
 ?
 #else
 #ifdef A_HBGET
-    SetKey(K_CTRL_RET,{||Key_Ctrl_Ret(GetActive())},{||GetActive()<>NIL .and. PROCNAME(2)='HBGETLIST:GETAPPLYKEY'})
-    SetKey(K_F10,{||hb_keyput(K_CTRL_W),.t.},{||GetActive()<>NIL .and. PROCNAME(2)='HBGETLIST:GETAPPLYKEY'})
-    SetKey(K_CTRL_L,{||hb_keyput(K_CTRL_W),.t.},{||GetActive()<>NIL .and. PROCNAME(2)='HBGETLIST:GETAPPLYKEY'})
+    n:={||Key_Ctrl_Ret(GetActive())}
+    t:={||GetActive()<>NIL .and. PROCNAME(2)='HBGETLIST:GETAPPLYKEY'}
+    i:={||hb_keyput(K_CTRL_W),.t.}
+#ifdef __PLATFORM__WINDOWS
+    SetKey(K_CTRL_RET,n,t)
+#else
+    SetKey(K_ALT_RET,n,t)
+#endif
+    SetKey(K_ALT_K,{|get,b|get:=GetActive(),b:= hb_gtInfo( HB_GTI_CLIPBOARDDATA ),if(""<>b,kibord(getlines(b)[1]),),.t.},t)
+    SetKey(K_ALT_B,{|get|get:=GetActive(),hb_gtInfo( HB_GTI_CLIPBOARDDATA, Alltrim(get:buffer) ),.t.},t)
+    SetKey(K_F10,i,t)
+    SetKey(K_CTRL_L,i,t)
 #endif
 //setkey(28,{|x|help(x)})
+#ifndef __HARBOUR__
 isega() //musi, bo korzysta z jej wyniku d.asm
+#endif
 SET CURSOR OFF
 SET SCOREBOARD OFF
 SET CONFIRM ON
@@ -206,7 +218,13 @@ func DefError(e)
 local i, cMessage:="", aOptions:={}, nChoice,r,t,n,bk,h,f,a,b,c,d
 field nazwa,baza,klucz,path,plik,for,unique,descend
 static s:=0,ee:=NIL
-
+#ifdef __HARBOUR__
+    #ifdef PC852
+     HB_CDPSELECT(PC852)
+    #else
+     HB_CDPSELECT('PLWIN')
+    #endif
+#endif
 // put messages to STDERR
   if e:severity=NIL
      e:severity:=ES_ERROR

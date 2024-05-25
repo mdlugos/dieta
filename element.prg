@@ -350,15 +350,16 @@ select elementy
  next i
  endif
  asort(atot,,,{|x,y|x[1]<y[1]})
- aeval(atot,{|x|dbseek(x[1],.f.),aadd(aret,if(empty(jedn),'*'+str(val(x[1])%100,2)+' '+subs(nazwa,2),nazwa+if(jedn='%',str(x[2],4)+" "+'%',str(x[2],10,3)+" "+jedn)))})
+// aeval(atot,{|x|dbseek(x[1],.f.),aadd(aret,if(empty(jedn),'*'+str(val(x[1])%100,2)+' '+subs(nazwa,2),nazwa+if(jedn='%',str(x[2],4)+" "+'%',str(x[2],10,3)+" "+jedn)))})
+ aeval(atot,{|x|dbseek(x[1],.f.),aadd(aret,if(empty(jedn),'*'+subs(nazwa,2),nazwa+if(jedn='%',str(x[2],4)+" "+'%',str(x[2],10,3)+" "+jedn)))})
 #else
  asort(atot,,,{|x,y|x[1]<y[1]})
  aeval(atot,{|x|dbseek(x[1],.f.),aadd(aret,nazwa+str(x[2],10,3)+" "+jedn)})
 #endif
 #ifdef A_NORMY
- if !empty(d) .and. len(dat)<9
+ if ign==NIL .and. !empty(d) .and. len(dat)<9
    select normy
-   aeval(aret,{|x,y|i:=atot[y,1],dbseek(i),__dblocate({||dind(d,dieta)},{||element=i}),if(found(),if(atot[y,2]<zaw_min,aret[y]+=' <<',if(atot[y,2]>zaw_max,aret[y]+=' >>',)),)})
+   aeval(aret,{|x,y|i:=atot[y,1],dbseek(i),__dblocate({||dind(d,dieta)},{||element=i}),if(found(),if(atot[y,2]<zaw_min,aret[y]+=' << niedob¢r',aret[y]+=if(atot[y,2]>zaw_max,' >> przekroczenie','    w normie')),)})
  endif
 #endif
 

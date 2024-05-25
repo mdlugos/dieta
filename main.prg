@@ -332,7 +332,8 @@ sel('posilki',,,.t.)
 dbeval({||aadd(posilki,posilek+" "+opis), PosStr+=posilek D_WAGI D_CENNIK},,{||posilek#' '},,,.f.)
 use
 sel('diety',,,.t.)
-#ifdef A_GOCZ
+#if 1
+//def A_GOCZ
 public dietylong:={}
 #define D_GOCZ , aadd(dietylong,trim(nazwa))
 #else

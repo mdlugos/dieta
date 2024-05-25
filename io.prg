@@ -609,7 +609,7 @@ FUNCTION KIBORD(txt)
 #ifdef __HARBOUR__
 local a:={},b
 
-do while (b:=inkey())#0
+do while (b:=inkey(,INKEY_ALL))#0
    aadd(a,b)
 enddo
 
@@ -684,7 +684,7 @@ function window(rown,coln,color)
    endif
    lc := SETCOLOR(color)
    colorselect(3)
-   @ r1,c1,r2,c2 BOX 'ÚÄ¿³ÙÄÀ³ '
+   @ r1,c1,r2,c2 BOX HB_TRANSLATE('ÚÄ¿³ÙÄÀ³ ',PC852,)
    colorselect(0)
    return({r1,c1,r2,c2,sc,rs,cs,cu,lc})
  elseif sc="A"
@@ -946,6 +946,252 @@ ENDIF
 
 RETURN r   // teraz ok
 **************
+#ifdef __HARBOUR__
+#include "hbclass.ch"
+
+#include "memoedit.ch"
+#include "setcurs.ch"
+
+#define _TBCI_COLOBJECT       1   // column object
+#define _TBCI_COLWIDTH        2   // width of the column
+#define _TBCI_COLPOS          3   // column position on screen
+#define _TBCI_CELLWIDTH       4   // width of the cell
+#define _TBCI_CELLPOS         5   // cell position in column
+#define _TBCI_COLSEP          6   // column separator
+#define _TBCI_SEPWIDTH        7   // width of the separator
+#define _TBCI_HEADING         8   // column heading
+#define _TBCI_FOOTING         9   // column footing
+#define _TBCI_HEADSEP        10   // heading separator
+#define _TBCI_FOOTSEP        11   // footing separator
+#define _TBCI_DEFCOLOR       12   // default color
+#define _TBCI_FROZENSPACE    13   // space after frozen columns
+#define _TBCI_LASTSPACE      14   // space after last visible column
+#define _TBCI_SIZE           14   // size of array with TBrowse column data
+
+#define _TBC_SETKEY_KEY       1
+#define _TBC_SETKEY_BLOCK     2
+
+#define _TBC_CLR_STANDARD     1
+#define _TBC_CLR_SELECTED     2
+#define _TBC_CLR_HEADING      3
+#define _TBC_CLR_FOOTING      4
+#define _TBC_CLR_MAX          4
+
+#define _TBR_CONF_COLORS      1
+#define _TBR_CONF_COLUMNS     2
+#define _TBR_CONF_ALL         3
+
+#define _TBR_COORD( n )       Int( n )
+
+
+CREATE CLASS TUTF8Browse INHERIT TBrowse
+PROTECTED:
+  METHOD dispRow( nRow )                       // display TBrowse data
+  METHOD readRecord( nRow )
+  METHOD deHilite()
+  METHOD hiLite()
+ 
+ENDCLASS
+
+STATIC FUNCTION _SKIP_RESULT( xResult )
+  RETURN iif( HB_ISNUMERIC( xResult ), Int( xResult ), 0 )
+
+STATIC FUNCTION _CELLCOLORS( aCol, xValue, nMaxColorIndex )
+
+  LOCAL aColors := { aCol[ _TBCI_DEFCOLOR ][ _TBC_CLR_STANDARD ], ;
+                     aCol[ _TBCI_DEFCOLOR ][ _TBC_CLR_SELECTED ] }
+  LOCAL xColor := Eval( aCol[ _TBCI_COLOBJECT ]:colorBlock, xValue )
+  LOCAL nColorIndex
+  LOCAL nPos, nMax
+
+  IF HB_ISARRAY( xColor )
+     nMax := Min( Len( xColor ), 2 )
+     FOR nPos := 1 TO nMax
+        nColorIndex := xColor[ nPos ]
+        IF HB_ISNUMERIC( nColorIndex )
+           nColorIndex := Int( nColorIndex )
+           IF nColorIndex >= 0 .AND. nColorIndex <= nMaxColorIndex
+              aColors[ nPos ] := nColorIndex
+           ENDIF
+        ENDIF
+     NEXT
+  ENDIF
+
+  RETURN aColors
+
+
+METHOD readRecord( nRow ) CLASS TUTF8Browse
+
+  LOCAL aCol
+  LOCAL oCol
+  LOCAL cValue
+  LOCAL aColor
+  LOCAL nColors, nToMove, nMoved
+  LOCAL nRowCount := ::rowCount
+  LOCAL lRead := .F.
+
+  IF nRow >= 1 .AND. nRow <= nRowCount .AND. ! ::aCellStatus[ nRow ]
+
+     IF nRow <= ::nLastRow
+        nToMove := nRow - ::nBufferPos
+        nMoved := _SKIP_RESULT( Eval( ::bSkipBlock, nToMove ) )
+        /* FIXME: add protection against unexpected results
+         *        CA-Cl*pper does not fully respect here the returned
+         *        value and current code below replicates what Clipper
+         *        seems to do but it means that in network environment
+         *        with concurrent modifications wrong records can be
+         *        shown. [druzus]
+         */
+        IF nToMove > 0
+           IF nMoved < 0
+              nMoved := 0
+           ENDIF
+        ELSEIF nToMove < 0
+           nMoved := nToMove
+        ELSE
+           nMoved := 0
+        ENDIF
+        ::nBufferPos += nMoved
+        IF nToMove > 0 .AND. nMoved < nToMove
+           ::nLastRow := ::nBufferPos
+        ELSE
+           lRead := .T.
+        ENDIF
+     ENDIF
+
+     nColors := Len( ::aColors )
+     IF nRow <= ::nLastRow
+        FOR EACH aCol, cValue, aColor IN ::aColData, ::aCellValues[ nRow ], ::aCellColors[ nRow ]
+           oCol := aCol[ _TBCI_COLOBJECT ]
+           cValue := Eval( oCol:block )
+           aColor := _CELLCOLORS( aCol, cValue, nColors )
+           IF ValType( cValue ) $ "CMNDTL"
+              cValue := HB_UTF8Left( Transform( cValue, iif( HB_ISSTRING( oCol:picture ), oCol:picture, NIL ) ) + Space( aCol[ _TBCI_CELLWIDTH ] ), aCol[ _TBCI_CELLWIDTH ] )
+           ELSE
+              cValue := Space( aCol[ _TBCI_CELLWIDTH ] )
+           ENDIF
+        NEXT
+     ELSE
+        FOR EACH aCol, cValue, aColor IN ::aColData, ::aCellValues[ nRow ], ::aCellColors[ nRow ]
+           aColor := { aCol[ _TBCI_DEFCOLOR ][ 1 ], aCol[ _TBCI_DEFCOLOR ][ 2 ] }
+           cValue := Space( aCol[ _TBCI_CELLWIDTH ] )
+        NEXT
+     ENDIF
+
+     ::aCellStatus[ nRow ] := .T.
+     ::aDispStatus[ nRow ] := .T.
+
+  ENDIF
+
+  RETURN lRead
+
+
+METHOD dispRow( nRow ) CLASS TUTF8Browse
+
+  LOCAL nRowPos, nColPos
+  LOCAL aCol
+  LOCAL lFirst
+  LOCAL cValue, cColor, cStdColor
+  LOCAL aColors
+
+  IF nRow >= 1 .AND. nRow <= ::rowCount
+
+     DispBegin()
+
+     nRowPos := ::n_Top + ::nHeadHeight + iif( ::lHeadSep, 1, 0 ) + nRow - 1
+     cStdColor := ::colorValue( _TBC_CLR_STANDARD )
+
+     hb_DispBox( nRowPos, ::n_Left, nRowPos, ::n_Right, Space( 9 ), cStdColor )
+
+     lFirst := .T.
+     FOR EACH aCol, cValue, aColors IN ::aColData, ::aCellValues[ nRow ], ::aCellColors[ nRow ]
+        IF aCol[ _TBCI_COLPOS ] != NIL
+           nColPos := aCol[ _TBCI_COLPOS ]
+           IF lFirst
+              lFirst := .F.
+           ELSEIF aCol[ _TBCI_SEPWIDTH ] > 0
+              hb_DispOutAtBox( nRowPos, aCol[ _TBCI_COLPOS ] - aCol[ _TBCI_FROZENSPACE ], ;
+                               aCol[ _TBCI_COLSEP ], cStdColor )
+              nColPos += aCol[ _TBCI_SEPWIDTH ]
+           ENDIF
+           nColPos += aCol[ _TBCI_CELLPOS ]
+           cColor := ::colorValue( aColors[ _TBC_CLR_STANDARD ] )
+           IF aCol[ _TBCI_LASTSPACE ] < 0
+              hb_DispOutAt( nRowPos, nColPos, ;
+                            hb_utf8Left( cValue, ::n_Right - nColPos + 1 ), cColor )
+           ELSE
+#ifdef HB_CLP_STRICT
+              hb_DispOutAt( nRowPos, nColPos, ;
+                            hb_utf8Left( cValue, aCol[ _TBCI_COLWIDTH ] - aCol[ _TBCI_CELLPOS ] ), cColor )
+#else
+              hb_DispOutAt( nRowPos, nColPos, cValue, cColor )
+#endif
+           ENDIF
+        ENDIF
+     NEXT
+
+     ::aDispStatus[ nRow ] := .F.
+
+     DispEnd()
+  ENDIF
+
+  RETURN Self
+
+METHOD hiLite() CLASS TUTF8Browse
+
+    LOCAL cValue, cColor
+ 
+    IF ::nConfigure != 0
+       ::doConfigure()
+    ENDIF
+ 
+    DispBegin()
+ 
+    IF ::setCursorPos()
+       IF ( cValue := ::cellValue( ::nRowPos, ::nColPos ) ) != NIL
+          cColor := ::colorValue( ::cellColor( ::nRowPos, ::nColPos )[ _TBC_CLR_SELECTED ] )
+          IF ::n_Col + hb_utf8Len( cValue ) > _TBR_COORD( ::n_Right )
+             cValue := hb_utf8Left( cValue, _TBR_COORD( ::n_Right ) - ::n_Col + 1 )
+          ENDIF
+          hb_DispOutAt( ::n_Row, ::n_Col, cValue, cColor )
+          SetPos( ::n_Row, ::n_Col )
+          ::lHiLited := .T.
+       ENDIF
+    ENDIF
+ 
+    DispEnd()
+ 
+    RETURN Self
+ 
+ 
+ METHOD deHilite() CLASS TUTF8Browse
+ 
+    LOCAL cValue, cColor
+ 
+    IF ::nConfigure != 0
+       ::doConfigure()
+    ENDIF
+ 
+    DispBegin()
+ 
+    IF ::setCursorPos()
+       IF ( cValue := ::cellValue( ::nRowPos, ::nColPos ) ) != NIL
+          cColor := ::colorValue( ::cellColor( ::nRowPos, ::nColPos )[ _TBC_CLR_STANDARD ] )
+          IF ::n_Col + hb_utf8Len( cValue ) > _TBR_COORD( ::n_Right )
+             cValue := hb_utf8Left( cValue, _TBR_COORD( ::n_Right ) - ::n_Col + 1 )
+          ENDIF
+          hb_DispOutAt( ::n_Row, ::n_Col, cValue, cColor )
+          SetPos( ::n_Row, ::n_Col )
+       ENDIF
+    ENDIF
+    ::lHiLited := .F.
+ 
+    DispEnd()
+ 
+    RETURN Self
+ 
+#endif  
+**********************
 static proc ins(a,i,c)
    asize(a,len(a)+1)
    ains(a,i)
@@ -1030,7 +1276,7 @@ local j,x
 return
 *************
 FUNCTION ARREDIT(a,n,p,v,w,r,t,tb)
-local i,win,b,j,k,c,x,fr:=1
+local saved_a:=_a,i,win,b,j,k,c,x,fr:=1,utf8:=HB_CDPISUTF8(HB_CDPSELECT())
 j:=len(a[1])
 
 if j=0
@@ -1057,21 +1303,29 @@ else
   n:=array(j)
 endif
 _a:=a[1]
+if utf8
+aeval(_a,{|x,y|if(x=NIL,x:=_a[y]:=space(5),),j+=max(if(n[y]=NIL,0,hb_utf8len(n[y])),hb_utf8len(Tran(x,p[y])))})
+else
 aeval(_a,{|x,y|if(x=NIL,x:=_a[y]:=space(5),),j+=max(if(n[y]=NIL,0,len(n[y])),len(Tran(x,p[y])))})
+endif
 
 win:=window(i,j)
 
        i:=1
-       b:=tbrowsenew(win[1]+1,win[2]+1,win[3]-1,win[4]-1)
-       b:colsep:='³'
+       if utf8
+         b:=tutf8browse():new(win[1]+1,win[2]+1,win[3]-1,win[4]-1)
+       else
+         b:=tbrowsenew(win[1]+1,win[2]+1,win[3]-1,win[4]-1)
+       endif
+       b:colsep:=HB_TRANSLATE('³',PC852,)
        if valtype(n)='A'
-          b:headsep:='ÂÄ'
+          b:headsep:=HB_TRANSLATE('ÂÄ',PC852,)
        endif
        b:gotopblock:={||i:=1,_a:=a[i],i}
        b:gobottomblock:={||i:=len(a),_a:=a[i],i}
        b:skipblock:={|n,l|l:=i,i+=n,i:=max(1,min(i,len(a))),_a:=a[i],i-l}
        if t<>NIL
-          b:footsep:='ÁÄ'
+          b:footsep:=HB_TRANSLATE('ÁÄ',PC852,)
        endif
 
        c:=tbcolumnnew(,{||i})
@@ -1086,7 +1340,11 @@ win:=window(i,j)
            c:heading:=n[j]
          endif
          c:picture:=p[j]
+         if utf8
+         c:width:=max(if(n[j]=NIL,0,hb_utf8len(n[j])),hb_utf8len(Tran(a[1,j],p[j])))
+         else
          c:width:=max(if(n[j]=NIL,0,len(n[j])),len(Tran(a[1,j],p[j])))
+         endif
          if t<>NIL
             c:Footing:=Space(c:width)
          endif
@@ -1211,6 +1469,7 @@ win:=window(i,j)
 
 window(win)
 
+_a:=saved_a
 RETURN k<>K_ESC
 #endif
 *******************

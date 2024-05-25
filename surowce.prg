@@ -3,7 +3,7 @@
 field ilosc,jedn,jmaG,skladnik,nazwa,indx_maT,przel,gram,element,danie,data,;
       posilek,cena,pozycja,kod,opis,dieta,gramatura
 
-static poprec,oldrec,keyp,startrec,curprompt,nowy,na,in,jem,prz,jed,gra,il,ce,da,keyf9,kw
+static poprec,oldrec,keyp,startrec,curprompt,nowy,na,in,jem,prz,jed,gra,il,ce,da,keyf9,kw,op
 
 MEMVAR CHANGED,diety,posilki,grupy,mies_rob
 
@@ -21,7 +21,7 @@ MEMVAR CHANGED,diety,posilki,grupy,mies_rob
 ************************
 func sur_in(deep,n)
 
-local stat,r,vars:={poprec,oldrec,keyp,startrec,curprompt,nowy,na,in,jem,prz,jed,gra,il,ce,da,keyf9,kw}
+local stat,r,vars:={poprec,oldrec,keyp,startrec,curprompt,nowy,na,in,jem,prz,jed,gra,il,ce,da,keyf9,kw,op}
 poprec:=startrec:=oldrec:=0
 if keyp#NIL
    deep=.t.
@@ -61,7 +61,7 @@ if deep
    if !eof()
     FORM_EDIT({20,61,5,1,999,;
 {|f|sDOK1(f)},;
-{|f|sdok2(f,{})},;
+{|f|sdok2(f,{},deep)},;
 {||setcursor(0)},;
 {||DBSELECTAREA("zawar"),ordsetfocus("zaw_skl")},;
 {|f|sdok4(f,{},deep)},;
@@ -71,7 +71,7 @@ else
     lock
     FORM_EDIT({20,61,5,1,999,;
 {|f|sDOK1(f)},;
-{|f,g|sdok2(f,g)},;
+{|f,g|sdok2(f,g,deep)},;
 {|f|sdok3(f)},;
 {||DBSELECTAREA("zawar"),ordsetfocus("zaw_skl")},;
 {|f,g|sdok4(f,g,deep)},;
@@ -99,17 +99,16 @@ prz:=vars[10]
 jed:=vars[11]
 gra:=vars[12]
 il:=vars[13]
-//#ifdef A_ELZ
 ce:=vars[14]
 da:=vars[15]
 keyf9:=vars[16]
-//#endif
 kw:=vars[17]
+op:=vars[18]
 RETURN r
 **************
 stat pROC sDOK1(_f)
-	SET CURSOR OFF
-	SET COLOR TO (_SBKGR)
+SET CURSOR OFF
+SET COLOR TO (_sbkgr)
   @ 0,_fco1,4,_fco2 BOX '…Õª∫∫ ∫∫ '
   @ 5,_fco1,7,_fco2 BOX 'ÃÕπ∫ºÕ»∫ '
   @ 5,_fco1+3 say 'F9'
@@ -127,8 +126,8 @@ stat pROC sDOK1(_f)
 
 RETURN
 ***********
-stat proc sdok2(_f,getlist)
-  local now
+stat proc sdok2(_f,getlist,deep)
+  local now,greader
   field index,stan,jm,waznosc,data_przy,jedN
   select surowce
   if !nowy
@@ -143,12 +142,23 @@ stat proc sdok2(_f,getlist)
   now:=if(nowy,"NOWY   ","POPRAWA")
 #ifdef A_KODY
   kw:=kod
+  if fieldpos('OPIS')<>0
+     op:=opis
+  endif
 #endif
+  @  5,_fco1+3 SAY if(empty(deep),'F9','ÕÕ') COLOR (_sbkgr)
   @  2,_fco1+2  get now picture "@K" valid {||nowy:=if(now=" ",!nowy,nowy),now:=if(nowy,"NOWY   ","POPRAWA"),.t.}
   @  2,_fco1+10 get NA picture "@KS23"
   @  2,_fco1+34 get in picture "@!KS"+str(min(7,len(in)),1)
+  @  4,_fco1+4  get jem picture "@K"
+  @  4,_fco1+11 get prz picture "@K 9999" valid prz#0 .or.alarm("MUSI BYè R‡ΩNY OD ZERA",,3,3)=NIL
+  @  4,_fco1+16 get jed picture "@K"
+  @  4,_fco1+34 get gra PICTURE "@K 9999.9"
 #ifdef A_KODY
-  @  3,_fco1+len(A_KODY)+4  get kw picture "@K"
+  @  3,_fco1+len(A_KODY)+4  get kw WHEN .f. COLOR _sbnorm
+  if !nowy .and. fieldpos('OPIS')<>0
+    getl op PICTURE "@S"+ltrim(str(_fco2-col()-1)) WHEN .f. COLOR _sbnorm
+  endif
 #else
 #ifdef A_ELZ
   cennik->(dbseek(keyp,.f.))
@@ -158,12 +168,10 @@ stat proc sdok2(_f,getlist)
   @  3,_fco1+30 get da
 #endif
 #endif
-  @  4,_fco1+4  get jem picture "@K"
-  @  4,_fco1+11 get prz picture "@K 9999" valid prz#0 .or.alarm("MUSI BYè R‡ΩNY OD ZERA",,3,3)=NIL
-  @  4,_fco1+16 get jed picture "@K"
-  @  4,_fco1+34 get gra PICTURE "@K 9999"
+if empty(deep)
+  greader:={|g|setkey(-8,{|p,g|g:=getactive(),p:=setkey(-8,NIL),f9(g,_f,getlist),setkey(-8,p)}),getreader(g),setkey(-8,NIL)}
 #ifndef A_ELZ
-#ifdef A_KODY
+#ifdef A_KODYyy
 #define D_KODY +'≥'+KOD
 #else
 #define D_KODY
@@ -173,20 +181,21 @@ stat proc sdok2(_f,getlist)
   SZUKAM({2,1,maxrow(),,1,0,"PRZEGL§D MAGAZYNU SPOΩYWCZEGO",{||INDEX+"≥"+NAZWA D_KODY;
   +IF(WAZNOSC>0 .and. STANY->STAN>0 .and. STANY->DATA_PRZY+WAZNOSC<date(),"","≥");
   +STR(STANY->STAN)+" "+JM},{|k,s D_MYSZ|stanmag(k,s D_MYSZ)},"",.T.}).and.showhead(getlist);
-  }),getreader(g),setkey(-1,k)}
+  }),eval(greader,g),setkey(-1,k)}
   getlist[2]:reader:=;
   {|g,k|k:=setkey(-1,{|p,g|g:=getactive(),g:changed:=;
   SZUKAM({2,1,maxrow(),,1,0,"PRZEGL§D MAGAZYNU SPOΩYWCZEGO",{||INDEX+"≥"+NAZWA D_KODY;
   +IF(WAZNOSC>0 .and. STANY->STAN>0 .and. STANY->DATA_PRZY+WAZNOSC<date(),"","≥");
   +STR(STANY->STAN)+" "+JM},{|k,s|stanmag(k,s)},UpP(trim(na)),.T.}).and.showhead(getlist);
-  }),getreader(g),setkey(-1,k)}
+  }),eval(greader,g),setkey(-1,k)}
   getlist[3]:reader:=;
   {|g,k|k:=setkey(-1,{|p,g|g:=getactive(),g:changed:=;
   SZUKAM({2,1,maxrow(),,1,0,"PRZEGL§D MAGAZYNU SPOΩYWCZEGO",{||INDEX+"≥"+NAZWA D_KODY;
   +IF(WAZNOSC>0 .and. STANY->STAN>0 .and. STANY->DATA_PRZY+WAZNOSC<date(),"","≥");
   +STR(STANY->STAN)+" "+JM},{|k,s|stanmag(k,s)},UpP(trim(in)),.T.}).and.showhead(getlist);
-  }),getreader(g),setkey(-1,k)}
+  }),eval(greader,g),setkey(-1,k)}
 #endif
+endif
   __setproc(procname(0))
 return
 ************
@@ -196,7 +205,7 @@ stat func showhead(getlist)
   Na:=LEFT(INDX_MAT->NAZWA,LEN(Na))
   In:=INDX_MAT->INDEX
 #ifdef A_KODY
-  kw:=INDX_MAT->kod
+//  kw:=INDX_MAT->kod
 #endif
 
   if INDX_MAT->JM="kg"
@@ -228,18 +237,19 @@ return .t.
 stat proc sdok3(_f)
   local skl
   field jedN
+  altd()
   if updated()
-      keyf9:=keyp:=skladnik
-      if zawar->(dbseek(keyp))
-         startrec:=zawar->(recno())
-         curprompt:=trim(nazwa)+" "+jmaG
+      keyp:=skladnik
+      if startrec=0
+         if zawar->(dbseek(keyp))
+           keyf9:=keyp
+           startrec:=zawar->(recno())
+           curprompt:=trim(nazwa)+" "+jmaG
          //@ 5,_fco1+3 say 'F9' color _sbkgr
-      else
-         //@ 5,_fco1+3 say 'ÕÕ' color _sbkgr
-         startrec:=0
+         endif
       endif
       changed:=.t.
-      _fj=0
+      _fj:=0
       _fi:=1
       _flp:=_flpmax
       _fl:=1
@@ -312,6 +322,9 @@ stat proc sdok3(_f)
     gram:=gra
 #ifdef A_KODY
     kod:=kw
+    if fieldpos('opis')>0
+       opis:=op
+    endif
 #endif
 #ifdef A_ELZ
     select cennik
@@ -375,28 +388,51 @@ static fpstart:=0
     @ _fk,_fco1+6 GET na PICTURE "@KS20" VALID {|k,r|if(k:changed.and.fpstart=0,fpstart:=1,),k:=setkey(-8,NIL),r:=elval(_f,@na,@poprec,oldrec,startrec) .and. showel(_f,getlist),setkey(-8,k),r}
     GETL il picture "#####.###" valid {|k|if(k:changed.and.fpstart=0,fpstart:=2,),.t.}
      __setproc(procname(0))
-  //if startrec#0
-     getlist[1]:reader:={|g|setkey(-8,{|p,g|g:=getactive(),p:=setkey(-8,NIL),f9(g,_f,getlist),setkey(-8,p)}),getreader(g),setkey(-8,NIL)}
-  //endif
     fpstart:=0
+if empty(deep)
+     getlist[1]:reader:={|g|setkey(-8,{|p,g|g:=getactive(),p:=setkey(-8,NIL),f9(g,_f,getlist),setkey(-8,p)}),getreader(g),setkey(-8,NIL)}
 #ifdef A_LPNUM
   setkey(402,{|p,g|g:=getactive(),if(_fnowy.or.updated(NIL),tone(130,3),doinsline(_f,getlist,g,{||skladnik==surowce->skladnik}))})
 #endif
+endif
 RETURN
 ********
 stat proc f9(g,_f,getlist)
-   local r:=elementy->(recno()),curprompt,s:=surowce->(recno())
+   local r:=elementy->(recno()),curprompt,s:=surowce->(recno()),are:=select()
    oldrec:=recno()
+   altd()
    if startrec=0
       poprec:=0
       if surowce(.f.)
          select surowce
          set order to tag sur_kod
-         keyf9:=skladnik
          curprompt:=trim(nazwa)+" "+jmaG
          select zawar
-         seek keyf9
+         seek surowce->skladnik
+         keyf9:=surowce->skladnik
          startrec:=recno()
+         if surowce->(select())=are
+            poprec:=startrec
+#ifdef A_KODY
+            varput(getlist,'kw',surowce->kod)
+            if surowce->(fieldpos('opis')>0)
+               varput(getlist,'op',surowce->opis)
+            endif
+#endif
+            varput(getlist,'gra',surowce->gram)
+            updated(.t.)
+            @ 6,_fco1,7,_fco2 BOX '∫ ∫∫ºƒ»∫ ' color _sbkgr
+            RESTSCREEN(1+2*_fskip+_frow,_fco1,maxrow(),_fco2,SUBSTR(_fscr,(_fco2-_fco1+1)*(1+2*_fskip+_frow)*D_REST+1))
+            surowce->(dbgoto(s))
+            dbseek(surowce->skladnik)
+#ifdef A_LAN
+            dbeval({||dbdelete()},{||reclock()},{||skladnik=surowce->skladnik})
+#else
+            dbeval({||dbdelete()},,{||skladnik=surowce->skladnik})
+#endif
+            select surowce
+            return
+         endif
          surowce->(dbgoto(s))
       else
          select surowce
@@ -406,6 +442,7 @@ stat proc f9(g,_f,getlist)
          go r
          select zawar
          go oldrec
+         select(are)
          return
       endif
    else
@@ -510,7 +547,11 @@ return SZUKAM({0,maxcol()/2-35,,,1,0,"PRZEGL§D SUROWC‡W CENA DATA",{||NAZWA+if(z
 #else
 select surowce
 set relation to skladnik into zawar
+#ifdef A_KODY
+return SZUKAM({0,maxcol()/2-30,,,12,0,"PRZEGL§D SUROWC‡W",{||KOD+"≥"+NAZWA+if(zawar->(found()),"≥","!")+jmaG},{|_skey,_s D_MYSZ|if(upden .and. _skey=13,_skey:=9,),sur(_skey,_s,upden D_MYSZ)},""})
+#else
 return SZUKAM({0,maxcol()/2-20,,,1,0,"PRZEGL§D SUROWC‡W",{||NAZWA+if(zawar->(found()),"≥","!")+jmaG},{|_skey,_s D_MYSZ|if(upden .and. _skey=13,_skey:=9,),sur(_skey,_s,upden D_MYSZ)},""})
+#endif
 #endif
 *******************
 FUNCTION SURVAL(_f,getlist,na,poprec,oldrec,startrec,aflag,apos)
@@ -544,7 +585,11 @@ znalaz:=SZUKAM({0,,maxrow(),maxcol(),1,len(trim(na)),"PRZEGL§D SUROWC‡W",if(alia
 select surowce
 su:=recno()
 SET ORDER TO tag sur_naZ
+#ifdef A_KODY
+znalaz:=SZUKAM({0,min(col(),maxcol()-40),maxrow(),,12,len(trim(na)),"PRZEGL§D SUROWC‡W",if(alias(sel)="ZAPOT",{||KOD+"≥"+NAZWA+"≥"+jmaG},{||KOD+"≥"+NAZWA+"("+jmaG+")≥"+surowce->jedN}),{|k,s D_MYSZ|sur(k,s,.t. D_MYSZ)},UpP(trim(na))})
+#else
 znalaz:=SZUKAM({0,min(col(),maxcol()-30),maxrow(),,1,len(trim(na)),"PRZEGL§D SUROWC‡W",if(alias(sel)="ZAPOT",{||NAZWA+"≥"+jmaG},{||NAZWA+"("+jmaG+")≥"+surowce->jedN}),{|k,s D_MYSZ|sur(k,s,.t. D_MYSZ)},UpP(trim(na))})
+#endif
 #endif
   set order to tag sur_kod
   select zapot
@@ -584,10 +629,11 @@ static choice:=0
 local stat
 do case
   CASE _SKEY=0 .and. alias()="SUROWCE"
+    set order to tag sur_naz
     _swar=&('{|p|'+IndexkeY(0)+'=p'+'}')
     if ! ( (eval(_swar,_spocz).or.dbseek(_spocz)).and._skip(0,,_s) )
-			_spocz=LEFT(_spocz,len(_spocz)-_slth)
-			_slth=0
+      _spocz=LEFT(_spocz,len(_spocz)-_slth)
+      _slth=0
       _sef:=.f.
       if !eval(_swar,_spocz)
          _skip(-1,,_s)
@@ -609,7 +655,7 @@ do case
 #endif
 
   case _skey=27
-		return .t.
+    return .t.
 
    case _skey=43
       go _srec[_sm]
@@ -711,13 +757,35 @@ do case
     endif
 
    case _skey=13
-		return _sret:=.t.
+      return _sret:=.t.
    case _skey=-8
       _sfil(_s)
       
    case _skey=-9
       _slist(".\"+left(alias(),3)+"*.frm",_s)
+#ifdef A_KODY
+   case alias()<>'SUROWCE'
+      return .f.
 
+   CASE _skey=2 .AND. _sbeg=1 // ^>
+    SET ORDER TO tag sur_naz
+    _sbeg:=len(kod)+2
+    _swar:=&('{|p|'+IndexkeY(0)+'=p'+'}')
+    _spform:={|p|tranr(p,"X/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")}
+    _spform:={|p,l|RIGHT(p,l)}
+    _spocz:=''
+    _slth:=0
+    refresh(1,_s)
+
+   CASE _skey=26 .AND. _sbeg#1 // ^<
+    SET ORDER TO tag sur_smb
+    _spocz:=''
+    _spform:={|p|tranr(p,repl("X",len(kod))+"|"+repl("X",len(nazwa)))}
+    _slth:=0
+    _sbeg:=1
+    _swar:=&('{|p|'+IndexkeY(0)+'=p'+'}')
+    refresh(1,_s)
+#endif
 endcase
 return .f.
 #ifdef A_ELZ

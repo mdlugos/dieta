@@ -661,7 +661,7 @@ static function danval(_f,getlist)
 
 field danie,posilek,DATA,nazwa,gramatura,jedn,dieta,opis
 
-LOCAL Z,s,pg
+LOCAL Z,s,pg,_s
   if empty(dan)
      dania->(dbgoto(0))
      menu->(dbgoto(0))
@@ -709,9 +709,20 @@ LOCAL Z,s,pg
  select dania
  set order to tag dan_naz
 
-  Z:=szukam({0,min(maxcol()-60,col()),maxrow(),,1,len(trim(dan))+1,;
-     'Danie',{||posilek+"/"+nazwa+if(""=opis,if(sklad->(dbseek(dania->danie)),"³","|"),"&")+dieta+"³"+gramatura+" "+jedn},;
-    {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',pg,dan))})
+    _s:={0,min(maxcol()-60,col()),maxrow(),,1,len(trim(dan))+1,;
+         'Danie',{||posilek+"/"+nazwa+if(""=opis,if(sklad->(dbseek(dania->danie)),"³","|"),"&")+dieta+"³"+gramatura+" "+jedn},;
+         {|k,s D_MYSZ|danszuk(k,s,.t. D_MYSZ)},trim(dseek(,'posilek,nazwa',pg,dan))}
+
+    if !dbseek(_spocz) .and. ordnumber('dan_uni')>0
+       set order to tag dan_uni
+       if dbseek(UpP(trim(dan)))
+         _slth:=0
+         _spocz:=''
+       endif
+       set order to tag dan_naz
+    endif
+
+    Z:=szukam(_s)
  SET ORDER TO tag dan_kod
 #ifdef A_DODATKI
  endif

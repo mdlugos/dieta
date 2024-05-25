@@ -102,9 +102,10 @@ local _scur,_srins,_selar,_scolor,_stxt,_skey,_srow,_scol,bx,cx,dx,myszflag,job
 
   if _sprompt=NIL
     _sprompt:={||tran(fieldget(1),)+"|"+tran(fieldget(2),)}
+    //+"|"+tran(fieldget(3),)}
     if _snagl=NIL
       _snagkol:=0//_scol1
-      _snagl:=padl(field(1),dbstruct()[1,3])+"Â"+field(2)
+      _snagl:=padl(field(1),dbstruct()[1,3],'Ä')+"Â"+field(2)
     endif
   endif
 
@@ -337,19 +338,19 @@ elseif k=K_ESC
 elseif ( k=K_CTRL_LEFT .or. k=K_CTRL_RIGHT ) .and. ordnumber()<>0
    txt:=eval(_sprompt,0,_s,.t.)
    if k=K_CTRL_RIGHT
-      k:=at('|',subs(txt,_sbeg))
-      if k=0
+      txt:=at('|',subs(txt,_sbeg))
+      if txt=0
          ord_l:=ordnumber()
          RETURN .f.
-      else
-         _sbeg:=k+_sbeg
-         k:=ordnumber()
-         ordsetfocus(k+1)
-         if indexord()=k
-            maxord:=k
-            ordsetfocus(1)
-         endif
       endif
+      k:=ordnumber()
+      ordsetfocus(k+1)
+      if indexord()=0
+         ord_l:=k
+         ordsetfocus(ord_l)
+         RETURN .f.
+      endif
+      _sbeg:=txt+_sbeg
    else
       if _sbeg=1
          ord_1:=ordnumber()

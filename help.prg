@@ -18,7 +18,7 @@ elseif pro=="ACZOJS"
 endif
 
   if '.'$pro
-     htext:=pro
+     htext:=lower(pro)
   else
      htext=lower(left(pro,8))
      do case
@@ -30,12 +30,26 @@ endif
      htext+=".hlp"
   endif
 
+  n:=3
+  do while .t.
+  
     IF FILE(htext).or.FILE(htext:=defa+"pomoc"+HB_ps()+htext)
-       txt=MEMOREAD(htext)
+       txt:=MEMOREAD(htext)
+       exit
+#ifdef A_HBGET
+    elseif n=3 .and. !empty(procnm)
+       htext:=lower(procnm)+'.hlp'
+       n:=4
+#endif
     else
-       txt="Brak pomocy na ten temat."
+       htext:=procname(n)+'.hlp'
     ENDIF
-
+    if empty(htext)
+       txt:="Brak pomocy na ten temat."
+       exit
+    endif 
+    n+=1
+   enddo
 
    r1=ROW()+1    // sciaga pod polem
    c1=MAX(0,col()-33)
@@ -121,7 +135,7 @@ osk:=HB_SETKEYSAVE()
     txt=MEMOEDIT(txt,r1+2,c1+3,r2-2,c2-3,.T.,"hufunc",ll,8,l,c,cl,cc)
     k:=lastkey()
     if k=K_CTRL_W .or. k=K_F10 .or. k=K_CTRL_L
-          MEMOWRIT(HTEXT,strtran(txt,chr(141)+chr(10)))
+          HB_MEMOWRIT(HTEXT,strtran(txt,chr(141)+chr(10)),.f.)
     elseif k=K_CTRL_P .and. 1=alarm("Czy drukowa†",{"Tak","Nie"},2)
           set console off
           k:=getlines(hardcr(txt))
@@ -165,7 +179,7 @@ osk:=HB_SETKEYSAVE()
        endif
        txt:=memoread(n)
        else
-        MEMOWRIT(n,strtran(txt,chr(141)+chr(10)))
+        MEMOWRIT(n,strtran(txt,chr(141)+chr(10)),.f.)
      endif
      message(m)
      loop
